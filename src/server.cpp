@@ -309,7 +309,17 @@ void handleCommand(SOCKET s, const Request &r, const std::string &phone)
 	} else if (cmd == "swap") {
 		// Swap which is in front on the projector: the presentation or OBS's projector
 		err = onUi([]() {
-			setOnTop(presentationInFront() ? "obs" : "presentation");
+			// With OBS not projecting, the presentation is what's in front
+			const bool toProjection = presentationInFront() || !isProjecting();
+			setOnTop(toProjection ? "obs" : "presentation");
+			// Swapping to the projection when OBS isn't projecting yet: start it, on the Black scene
+			if (toProjection && !isProjecting()) {
+				std::string e = switchScene("Black");
+				if (e.empty())
+					e = setProjecting(true);
+				if (!e.empty())
+					return e;
+			}
 			applyOnTop();
 			return std::string();
 		});

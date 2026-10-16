@@ -594,7 +594,7 @@ void refreshState()
 			   ",\"scenes\":" + scenes + ",\"rec\":" + (rec ? "true" : "false") +
 			   ",\"recT0\":" + std::to_string(g_recStart) + ",\"proj\":" + (projecting ? "true" : "false") +
 			   ",\"pjFound\":" + (pj ? "true" : "false") + ",\"onTop\":\"" + onTop() + "\"" +
-			   ",\"presFront\":" + (presentationInFront() ? "true" : "false") + ",\"pjName\":\"" + jsonEscape(projectorLabel()) +
+			   ",\"presFront\":" + (presentationInFront() || !projecting ? "true" : "false") + ",\"pjName\":\"" + jsonEscape(projectorLabel()) +
 			   "\"" + ",\"slides\":" + slidesJson() + "}";
 
 	bool changed = false;

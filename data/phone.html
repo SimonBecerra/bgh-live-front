@@ -541,7 +541,7 @@ function swapHTML(){
       <span class="${presFront ? "front" : ""}">${ic("proj")}</span>${ic("swap")}<span class="${presFront ? "" : "front"}">${ic("cast")}</span>
     </div>
     <h3 id="swH">Are you sure?</h3>
-    <p>${presFront ? "OBS's projection will go in front of the presentation." : "The presentation will go in front of OBS's projection."}</p>
+    <p>${presFront ? (st.proj ? "OBS's projection will go in front of the presentation." : "OBS will start projecting on the Black scene, in front of the presentation.") : "The presentation will go in front of OBS's projection."}</p>
     <div class="row2"><button class="btn quiet" id="swNo" type="button">Cancel</button><button class="btn primary" id="swYes" type="button">Swap</button></div>
   </div></div>`;
 }
@@ -550,10 +550,10 @@ function wireSwap(){
   $("swNo").onclick = close;
   $("scrim").onclick = e => { if(e.target.id === "scrim") close(); };
   $("swYes").onclick = async () => {
-    const toPres = !(S.st && S.st.presFront);
+    const toPres = !(S.st && S.st.presFront), starting = !toPres && !(S.st && S.st.proj);
     S.sheet = null; render();
     const r = await cmd("swap");
-    if(r.ok) toast(toPres ? "The presentation is in front." : "OBS's projection is in front.");
+    if(r.ok) toast(toPres ? "The presentation is in front." : starting ? "Projecting the Black scene, in front of the presentation." : "OBS's projection is in front.");
   };
 }
 function pjStopHTML(){
