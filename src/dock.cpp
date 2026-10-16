@@ -22,6 +22,7 @@ the Free Software Foundation; either version 2 of the License, or
 #include <QHBoxLayout>
 #include <QImage>
 #include <QLabel>
+#include <QMessageBox>
 #include <QPainter>
 #include <QPixmap>
 #include <QPushButton>
@@ -130,6 +131,29 @@ public:
 		projector->setTextInteractionFlags(Qt::TextSelectableByMouse);
 		lay->addWidget(projector);
 
+		// The same as the cast button on Controller phones: Program full screen on the projector, or close it
+		projBtn = new QPushButton();
+		projBtn->setMinimumHeight(40);
+		projBtn->setCursor(Qt::PointingHandCursor);
+		QObject::connect(projBtn, &QPushButton::clicked, [this]() {
+			if (isProjecting()) {
+				if (QMessageBox::question(this, "Stop projecting?",
+							  "Are you sure you want to stop projecting?\n\nOBS will close on the projector and "
+							  "the slideshow will show again.",
+							  QMessageBox::Yes | QMessageBox::No, QMessageBox::No) != QMessageBox::Yes)
+					return;
+				setProjecting(false);
+			} else {
+				const std::string err = setProjecting(true);
+				if (!err.empty())
+					QMessageBox::warning(this, "Can't project", QString::fromStdString(err));
+			}
+			last.clear();
+			refreshState(); // phones' cast buttons follow straight away
+			refresh();
+		});
+		lay->addWidget(projBtn);
+
 		auto *head = new QLabel("PAIRED PHONES");
 		head->setStyleSheet("font-size:11px;font-weight:bold;letter-spacing:1px;color:#8e919a;margin-top:6px;");
 		lay->addWidget(head);
@@ -151,7 +175,7 @@ public:
 		for (QScreen *s : QGuiApplication::screens())
 			names += s->name().toStdString() + ";";
 		std::string sig = address + "|" + c + "|" + k + "|" + (pj ? pj->name().toStdString() : "-") + "|" + choice +
-				  "|" + names;
+				  "|" + names + "|" + (isProjecting() ? "P" : "-");
 		const auto ph = phones();
 		for (auto &p : ph)
 			sig += "|" + p.id + p.name + p.mode + (p.online ? "1" : "0") + ago(p.lastSeen).toStdString();
@@ -203,6 +227,13 @@ public:
 			projector->setStyleSheet("color:#ff8a3d;");
 		}
 
+		const bool on = isProjecting();
+		projBtn->setEnabled(on || pj != nullptr);
+		projBtn->setText(on ? QString("Projecting on %1 · Stop").arg(QString::fromStdString(projectorLabel()))
+				    : QString("Project on %1").arg(QString::fromStdString(projectorLabel())));
+		projBtn->setStyleSheet(on ? "QPushButton{background:#F5B700;color:#132932;font-weight:bold;border-radius:6px;}"
+					  : "QPushButton{font-weight:bold;}");
+
 		while (QLayoutItem *it = list->takeAt(0)) {
 			if (QWidget *w = it->widget())
 				w->deleteLater();
@@ -248,6 +279,7 @@ private:
 	QVBoxLayout *lay = nullptr, *list = nullptr;
 	QLabel *qr = nullptr, *url = nullptr, *code = nullptr, *projector = nullptr;
 	QComboBox *screenBox = nullptr;
+	QPushButton *projBtn = nullptr;
 	std::string last;
 };
 

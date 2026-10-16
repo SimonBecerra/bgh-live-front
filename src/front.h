@@ -57,6 +57,7 @@ std::string setRecording(bool on);
 std::string setProjecting(bool on);
 
 QScreen *projectorScreen();      // UI thread
+bool isProjecting();             // UI thread: an OBS projector is open on the projector screen
 std::string screensDescription(); // UI thread: every connected screen's name, for the dock
 
 // Pairing (any thread)

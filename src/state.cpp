@@ -228,6 +228,12 @@ static std::vector<QWidget *> projectorWindows(QScreen *screen)
 	return out;
 }
 
+bool isProjecting()
+{
+	QScreen *pj = projectorScreen();
+	return pj && !projectorWindows(pj).empty();
+}
+
 /* ------------------------------------------------------------------ actions */
 std::string switchScene(const std::string &name)
 {
