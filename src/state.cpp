@@ -19,6 +19,7 @@ the Free Software Foundation; either version 2 of the License, or
 #include <QMetaObject>
 #include <QScreen>
 #include <QThread>
+#include <QTimer>
 #include <QWidget>
 
 #include <atomic>
@@ -138,14 +139,47 @@ static std::string settingsFile()
 	return out;
 }
 
+static std::string g_onTop = "obs";
+
 static void loadSettings()
 {
 	const std::string f = settingsFile();
 	obs_data_t *d = f.empty() ? nullptr : obs_data_create_from_json_file_safe(f.c_str(), "bak");
 	std::lock_guard<std::mutex> lock(g_cfgm);
 	g_choice = d ? obs_data_get_string(d, "projectorScreen") : "";
+	g_onTop = d && std::string(obs_data_get_string(d, "onTop")) == "presentation" ? "presentation" : "obs";
 	if (d)
 		obs_data_release(d);
+}
+
+static void saveSettings()
+{
+	obs_data_t *d = obs_data_create();
+	{
+		std::lock_guard<std::mutex> lock(g_cfgm);
+		obs_data_set_string(d, "projectorScreen", g_choice.c_str());
+		obs_data_set_string(d, "onTop", g_onTop.c_str());
+	}
+	const std::string f = settingsFile();
+	if (!f.empty())
+		obs_data_save_json_safe(d, f.c_str(), "tmp", "bak");
+	obs_data_release(d);
+}
+
+std::string onTop()
+{
+	std::lock_guard<std::mutex> lock(g_cfgm);
+	return g_onTop;
+}
+
+void setOnTop(const std::string &which)
+{
+	{
+		std::lock_guard<std::mutex> lock(g_cfgm);
+		g_onTop = which == "presentation" ? "presentation" : "obs";
+	}
+	saveSettings();
+	obs_log(LOG_INFO, "on top of the projector: %s", which.c_str());
 }
 
 std::string projectorChoice()
@@ -166,12 +200,7 @@ void setProjectorChoice(const std::string &name)
 		std::lock_guard<std::mutex> lock(g_cfgm);
 		g_choice = name;
 	}
-	obs_data_t *d = obs_data_create();
-	obs_data_set_string(d, "projectorScreen", name.c_str());
-	const std::string f = settingsFile();
-	if (!f.empty())
-		obs_data_save_json_safe(d, f.c_str(), "tmp", "bak");
-	obs_data_release(d);
+	saveSettings();
 	obs_log(LOG_INFO, "projector screen: %s", name.empty() ? "any screen named OPTOMA" : name.c_str());
 }
 
@@ -225,6 +254,17 @@ static std::vector<QWidget *> projectorWindows(QScreen *screen)
 			continue;
 		out.push_back(w);
 	}
+	return out;
+}
+
+std::vector<void *> obsProjectorHandles()
+{
+	std::vector<void *> out;
+	QScreen *pj = projectorScreen();
+	if (!pj)
+		return out;
+	for (QWidget *w : projectorWindows(pj))
+		out.push_back((void *)w->winId());
 	return out;
 }
 
@@ -282,6 +322,9 @@ std::string setProjecting(bool on)
 		       " screen. Check the projector's HDMI cable is plugged into the laptop.";
 	const int index = (int)QGuiApplication::screens().indexOf(screen);
 	obs_frontend_open_projector("Program", index, "", "");
+	// Straight away, so a presentation chosen to stay in front covers the new projector without a flash
+	applyOnTop();
+	QTimer::singleShot(150, []() { applyOnTop(); });
 	return "";
 }
 
@@ -549,7 +592,7 @@ void refreshState()
 	std::string json = std::string("{\"obs\":true") + ",\"program\":\"" + jsonEscape(program) + "\"" +
 			   ",\"scenes\":" + scenes + ",\"rec\":" + (rec ? "true" : "false") +
 			   ",\"recT0\":" + std::to_string(g_recStart) + ",\"proj\":" + (projecting ? "true" : "false") +
-			   ",\"pjFound\":" + (pj ? "true" : "false") + ",\"pjName\":\"" + jsonEscape(projectorLabel()) +
+			   ",\"pjFound\":" + (pj ? "true" : "false") + ",\"onTop\":\"" + onTop() + "\"" + ",\"pjName\":\"" + jsonEscape(projectorLabel()) +
 			   "\"" + ",\"slides\":" + slidesJson() + "}";
 
 	bool changed = false;

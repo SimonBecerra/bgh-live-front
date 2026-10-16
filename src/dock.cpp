@@ -15,6 +15,7 @@ the Free Software Foundation; either version 2 of the License, or
 #include <obs-frontend-api.h>
 #include <plugin-support.h>
 
+#include <QButtonGroup>
 #include <QComboBox>
 #include <QDockWidget>
 #include <QGuiApplication>
@@ -154,6 +155,35 @@ public:
 		});
 		lay->addWidget(projBtn);
 
+		// When OBS is projecting and a slideshow is also on the projector, which one the audience sees
+		auto *topHead = new QLabel("IN FRONT ON THE PROJECTOR");
+		topHead->setStyleSheet("font-size:11px;font-weight:bold;letter-spacing:1px;color:#8e919a;margin-top:6px;");
+		lay->addWidget(topHead);
+		auto *topRow = new QHBoxLayout();
+		topRow->setSpacing(0);
+		topObs = new QPushButton("OBS Projector");
+		topPres = new QPushButton("Presentation");
+		auto *group = new QButtonGroup(this);
+		group->setExclusive(true);
+		for (QPushButton *b : {topObs, topPres}) {
+			b->setCheckable(true);
+			b->setMinimumHeight(34);
+			b->setCursor(Qt::PointingHandCursor);
+			group->addButton(b);
+			topRow->addWidget(b, 1);
+		}
+		topObs->setStyleSheet(segStyle("6px 0 0 6px"));
+		topPres->setStyleSheet(segStyle("0 6px 6px 0"));
+		topObs->setToolTip("OBS's projector covers the slideshow while it's open");
+		topPres->setToolTip("The slideshow stays in front; OBS's projector waits behind it");
+		QObject::connect(topObs, &QPushButton::clicked, [this]() { chooseTop("obs"); });
+		QObject::connect(topPres, &QPushButton::clicked, [this]() { chooseTop("presentation"); });
+		lay->addLayout(topRow);
+		topNote = new QLabel();
+		topNote->setWordWrap(true);
+		topNote->setStyleSheet("color:#8e919a;font-size:11px;");
+		lay->addWidget(topNote);
+
 		auto *head = new QLabel("PAIRED PHONES");
 		head->setStyleSheet("font-size:11px;font-weight:bold;letter-spacing:1px;color:#8e919a;margin-top:6px;");
 		lay->addWidget(head);
@@ -175,7 +205,7 @@ public:
 		for (QScreen *s : QGuiApplication::screens())
 			names += s->name().toStdString() + ";";
 		std::string sig = address + "|" + c + "|" + k + "|" + (pj ? pj->name().toStdString() : "-") + "|" + choice +
-				  "|" + names + "|" + (isProjecting() ? "P" : "-");
+				  "|" + names + "|" + (isProjecting() ? "P" : "-") + "|" + onTop();
 		const auto ph = phones();
 		for (auto &p : ph)
 			sig += "|" + p.id + p.name + p.mode + (p.online ? "1" : "0") + ago(p.lastSeen).toStdString();
@@ -228,9 +258,17 @@ public:
 		}
 
 		const bool on = isProjecting();
+		const bool presFront = onTop() == "presentation";
 		projBtn->setEnabled(on || pj != nullptr);
-		projBtn->setText(on ? QString("Projecting on %1 · Stop").arg(QString::fromStdString(projectorLabel()))
+		projBtn->setText(on ? QString("Projecting on %1%2 · Stop")
+					      .arg(QString::fromStdString(projectorLabel()))
+					      .arg(presFront ? " (behind the presentation)" : "")
 				    : QString("Project on %1").arg(QString::fromStdString(projectorLabel())));
+		topObs->setChecked(!presFront);
+		topPres->setChecked(presFront);
+		topNote->setText(presFront ? "The slideshow stays in front. OBS's projector waits behind it and shows when the "
+					     "slideshow is closed."
+					   : "OBS's projector covers the slideshow while it's open. Close it to show the slideshow.");
 		projBtn->setStyleSheet(on ? "QPushButton{background:#F5B700;color:#132932;font-weight:bold;border-radius:6px;}"
 					  : "QPushButton{font-weight:bold;}");
 
@@ -279,7 +317,24 @@ private:
 	QVBoxLayout *lay = nullptr, *list = nullptr;
 	QLabel *qr = nullptr, *url = nullptr, *code = nullptr, *projector = nullptr;
 	QComboBox *screenBox = nullptr;
-	QPushButton *projBtn = nullptr;
+	QPushButton *projBtn = nullptr, *topObs = nullptr, *topPres = nullptr;
+	QLabel *topNote = nullptr;
+
+	static QString segStyle(const char *radius)
+	{
+		return QString("QPushButton{font-weight:bold;border-radius:%1;padding:4px 8px;}"
+			       "QPushButton:checked{background:#F5B700;color:#132932;}")
+			.arg(radius);
+	}
+
+	void chooseTop(const std::string &which)
+	{
+		setOnTop(which);
+		applyOnTop();
+		last.clear();
+		refresh();
+		refreshState();
+	}
 	std::string last;
 };
 

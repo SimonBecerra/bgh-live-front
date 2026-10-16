@@ -243,6 +243,34 @@ std::string sendArrow(int delta)
 	return "";
 }
 
+/* -------------------------------------------------------------- which window stays in front */
+// Windows this plug-in made "always on top", so only those are ever put back
+std::vector<HWND> g_madeTop;
+
+bool isTopmost(HWND w)
+{
+	return (GetWindowLongPtrW(w, GWL_EXSTYLE) & WS_EX_TOPMOST) != 0;
+}
+
+void makeTop(HWND w, bool top)
+{
+	if (!w || !IsWindow(w))
+		return;
+	if (top) {
+		if (!isTopmost(w))
+			SetWindowPos(w, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+		if (std::find(g_madeTop.begin(), g_madeTop.end(), w) == g_madeTop.end())
+			g_madeTop.push_back(w);
+	} else {
+		auto it = std::find(g_madeTop.begin(), g_madeTop.end(), w);
+		if (it == g_madeTop.end())
+			return; // never touch a window this plug-in didn't raise
+		g_madeTop.erase(it);
+		if (isTopmost(w))
+			SetWindowPos(w, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+	}
+}
+
 /* -------------------------------------------------------------- PowerPoint, through COM */
 HRESULT dispCall(IDispatch *d, const wchar_t *name, WORD flags, VARIANT *result, UINT argc, VARIANT *args)
 {
@@ -595,6 +623,48 @@ std::vector<unsigned char> slideImage(const std::string &which)
 
 // UI thread, once a second. When PowerPoint isn't running the show and a Presenter phone is watching,
 // grab the projector screen so the phone shows what the audience sees.
+void applyOnTop(bool restore)
+{
+#ifdef _WIN32
+	g_madeTop.erase(std::remove_if(g_madeTop.begin(), g_madeTop.end(), [](HWND w) { return !IsWindow(w); }),
+			g_madeTop.end());
+	if (restore) {
+		for (HWND w : std::vector<HWND>(g_madeTop))
+			makeTop(w, false);
+		return;
+	}
+	HWND pres = nullptr;
+	if (HMONITOR mon = projectorMonitor()) {
+		MONITORINFO mi{};
+		mi.cbSize = sizeof(mi);
+		GetMonitorInfoW(mon, &mi);
+		WinFind f{mon, mi.rcMonitor, GetCurrentProcessId()};
+		EnumWindows(winEnum, (LPARAM)&f);
+		pres = f.found;
+	}
+	std::vector<HWND> obs;
+	for (void *h : obsProjectorHandles())
+		obs.push_back((HWND)h);
+	const bool presFront = onTop() == "presentation";
+	// Anything raised before that isn't wanted in front any more goes back to normal
+	for (HWND w : std::vector<HWND>(g_madeTop)) {
+		const bool isObs = std::find(obs.begin(), obs.end(), w) != obs.end();
+		const bool keep = presFront ? (w == pres) : isObs;
+		if (!keep)
+			makeTop(w, false);
+	}
+	if (presFront) {
+		if (pres && !obs.empty())
+			makeTop(pres, true); // only needed while an OBS projector is there to cover it
+	} else {
+		for (HWND w : obs)
+			makeTop(w, true);
+	}
+#else
+	(void)restore;
+#endif
+}
+
 std::string slidesApp()
 {
 	std::lock_guard<std::mutex> lock(g_m);

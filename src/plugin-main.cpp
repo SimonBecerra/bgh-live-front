@@ -47,6 +47,7 @@ static void startAll()
 	QObject::connect(g_timer, &QTimer::timeout, []() {
 		front::refreshState();
 		front::slidesTick();
+		front::applyOnTop();
 		front::dockRefresh();
 	});
 	g_timer->start();
@@ -64,6 +65,7 @@ static void stopAll()
 		delete g_timer;
 		g_timer = nullptr;
 	}
+	front::applyOnTop(true); // give the projector's windows their normal order back
 	front::stateShutdown(); // first, so nothing waits on OBS's UI thread while it closes
 	front::serverStop();
 	front::slidesStop();
