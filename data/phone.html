@@ -355,7 +355,7 @@ async function cmd(c, args = {}){
 function headerHTML(){
   const pres = S.mode === "presenter", st = S.st || {};
   return `<header class="top"><div class="bar1">
-      <h1 class="brand">${LOGO}<span><b>BGH</b> LIVE Front</span></h1>
+      <h1 class="brand">${LOGO}<span><b>BGH</b> Front</span></h1>
       <button class="mode-chip ${pres ? "is-pres" : ""}" id="modeSwap" type="button" aria-label="${pres ? "Presenter mode. Tap to switch to Controller" : "Controller mode. Tap to switch to Presenter"}">${pres ? "Presenter" : "Controller"}</button>
       <div class="conn ${live() ? "" : "lost"}" role="status" aria-label="${live() ? "Connected to Device" : "Reconnecting"}">${live() ? `<button class="conn-btn" id="connBtn" type="button" aria-label="Connected to Device">${BLEND}</button>` : `<i class="dot"></i><span>Reconnecting…</span>`}</div>
       ${pres && !physLand() ? `<button class="gear" id="turn" type="button" aria-pressed="${S.turn}" aria-label="${S.turn ? "Turn upright" : "Turn sideways"}">${ic("rotate")}</button>` : ""}
@@ -556,7 +556,7 @@ const MODE_INFO = {
 };
 function modePickHTML(){
   return `<div class="pair">
-    <h1 class="brand">${LOGO}<span><b>BGH</b> LIVE Front</span></h1>
+    <h1 class="brand">${LOGO}<span><b>BGH</b> Front</span></h1>
     <h2>How will you use this phone?</h2>
     <div class="modes">${Object.entries(MODE_INFO).map(([k, m]) => `<button class="mode-card" type="button" data-mode="${k}">${ic(m.icon)}<b>${m.name}</b><span>${m.text}</span></button>`).join("")}</div>
   </div><div class="toast" id="toast" role="status" hidden></div>`;
@@ -573,7 +573,7 @@ function setMode(m){
 /* Pairing: the QR code in OBS pairs by itself; otherwise type the 3-digit code shown there */
 function pairHTML(){
   return `<div class="pair">
-    <h1 class="brand">${LOGO}<span><b>BGH</b> LIVE Front</span></h1>
+    <h1 class="brand">${LOGO}<span><b>BGH</b> Front</span></h1>
     <h2>Pair this phone with the front laptop</h2>
     ${S.note ? `<div class="banner">${ic("wifi")}<div>${esc(S.note)}</div></div>` : ""}
     <p>On the laptop, find the <b>BGH LIVE Front</b> panel in OBS. Scan its QR code with this phone's camera, or type the code it shows.</p>
