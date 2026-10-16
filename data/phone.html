@@ -60,6 +60,9 @@ svg.i{width:20px;height:20px;flex:none;stroke:currentColor;fill:none;stroke-widt
 @keyframes blink{50%{opacity:.25}}
 .gear[aria-pressed="true"]{border-color:var(--accent);color:var(--accent)}
 .gear{width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:var(--panel);display:grid;place-items:center;color:var(--muted);flex:none}
+/* Safari gives buttons padding of its own: without this the icon sits off-centre */
+.gear,.conn-btn{padding:0;box-sizing:border-box;line-height:0;-webkit-appearance:none;appearance:none}
+.gear svg.i,.conn-btn svg.i{display:block;margin:auto}
 .banner{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:12px;background:var(--warn-soft);border:1px solid var(--warn);font-size:13px;line-height:1.4;flex:none}
 .banner svg.i{color:var(--warn)}
 
