@@ -122,8 +122,69 @@ bool runOnUi(const std::function<void()> &fn, int timeoutMs)
 }
 
 /* ------------------------------------------------------------------ the projector screen */
+static std::mutex g_cfgm;
+static std::string g_choice;
+
+static std::string settingsFile()
+{
+	char *dir = obs_module_config_path("");
+	if (dir) {
+		os_mkdirs(dir);
+		bfree(dir);
+	}
+	char *p = obs_module_config_path("settings.json");
+	std::string out = p ? p : "";
+	bfree(p);
+	return out;
+}
+
+static void loadSettings()
+{
+	const std::string f = settingsFile();
+	obs_data_t *d = f.empty() ? nullptr : obs_data_create_from_json_file_safe(f.c_str(), "bak");
+	std::lock_guard<std::mutex> lock(g_cfgm);
+	g_choice = d ? obs_data_get_string(d, "projectorScreen") : "";
+	if (d)
+		obs_data_release(d);
+}
+
+std::string projectorChoice()
+{
+	std::lock_guard<std::mutex> lock(g_cfgm);
+	return g_choice;
+}
+
+std::string projectorLabel()
+{
+	const std::string c = projectorChoice();
+	return c.empty() ? std::string(kProjectorName) : c;
+}
+
+void setProjectorChoice(const std::string &name)
+{
+	{
+		std::lock_guard<std::mutex> lock(g_cfgm);
+		g_choice = name;
+	}
+	obs_data_t *d = obs_data_create();
+	obs_data_set_string(d, "projectorScreen", name.c_str());
+	const std::string f = settingsFile();
+	if (!f.empty())
+		obs_data_save_json_safe(d, f.c_str(), "tmp", "bak");
+	obs_data_release(d);
+	obs_log(LOG_INFO, "projector screen: %s", name.empty() ? "any screen named OPTOMA" : name.c_str());
+}
+
 QScreen *projectorScreen()
 {
+	// A screen chosen in the dock: that screen only, never another one
+	const std::string choice = projectorChoice();
+	if (!choice.empty()) {
+		for (QScreen *s : QGuiApplication::screens())
+			if (s->name().toStdString() == choice)
+				return s;
+		return nullptr;
+	}
 	const QString want = QString::fromUtf8(kProjectorName);
 	for (QScreen *s : QGuiApplication::screens()) {
 		const QString text = s->name() + " " + s->manufacturer() + " " + s->model();
@@ -211,7 +272,7 @@ std::string setProjecting(bool on)
 		return "";
 	}
 	if (!screen)
-		return std::string("Can't find the ") + kProjectorName +
+		return "Can't find the " + projectorLabel() +
 		       " screen. Check the projector's HDMI cable is plugged into the laptop.";
 	const int index = (int)QGuiApplication::screens().indexOf(screen);
 	obs_frontend_open_projector("Program", index, "", "");
@@ -482,7 +543,7 @@ void refreshState()
 	std::string json = std::string("{\"obs\":true") + ",\"program\":\"" + jsonEscape(program) + "\"" +
 			   ",\"scenes\":" + scenes + ",\"rec\":" + (rec ? "true" : "false") +
 			   ",\"recT0\":" + std::to_string(g_recStart) + ",\"proj\":" + (projecting ? "true" : "false") +
-			   ",\"pjFound\":" + (pj ? "true" : "false") + ",\"pjName\":\"" + jsonEscape(kProjectorName) +
+			   ",\"pjFound\":" + (pj ? "true" : "false") + ",\"pjName\":\"" + jsonEscape(projectorLabel()) +
 			   "\"" + ",\"slides\":" + slidesJson() + "}";
 
 	bool changed = false;
@@ -500,6 +561,7 @@ void refreshState()
 void stateInit()
 {
 	g_closing = false;
+	loadSettings();
 	loadPhones();
 	std::lock_guard<std::mutex> lock(g_pm);
 	newCode();

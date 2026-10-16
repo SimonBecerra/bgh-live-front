@@ -15,7 +15,9 @@ the Free Software Foundation; either version 2 of the License, or
 #include <obs-frontend-api.h>
 #include <plugin-support.h>
 
+#include <QComboBox>
 #include <QDockWidget>
+#include <QGuiApplication>
 #include <QFrame>
 #include <QHBoxLayout>
 #include <QImage>
@@ -108,6 +110,21 @@ public:
 		pairRow->addLayout(steps, 1);
 		lay->addLayout(pairRow);
 
+		// Which screen is the projector. Remembered by the screen's name, so Windows numbering screens
+		// differently after a restart or a replug doesn't move it.
+		auto *pjHead = new QLabel("PROJECTOR SCREEN");
+		pjHead->setStyleSheet("font-size:11px;font-weight:bold;letter-spacing:1px;color:#8e919a;margin-top:6px;");
+		lay->addWidget(pjHead);
+		screenBox = new QComboBox();
+		screenBox->setToolTip("The screen the cast button on Controller phones opens OBS on");
+		QObject::connect(screenBox, &QComboBox::activated, [this](int index) {
+			setProjectorChoice(screenBox->itemData(index).toString().toStdString());
+			last.clear();
+			refresh();
+			refreshState(); // phones see the new projector name straight away
+		});
+		lay->addWidget(screenBox);
+
 		projector = new QLabel();
 		projector->setWordWrap(true);
 		projector->setTextInteractionFlags(Qt::TextSelectableByMouse);
@@ -129,8 +146,12 @@ public:
 			addrs.empty() ? "" : "http://" + addrs.front() + ":" + std::to_string(kPort);
 		const std::string c = pairCode(), k = pairKey();
 		QScreen *pj = projectorScreen();
-		const std::string screens = pj ? "" : screensDescription();
-		std::string sig = address + "|" + c + "|" + k + "|" + (pj ? pj->name().toStdString() : "-") + "|" + screens;
+		const std::string choice = projectorChoice();
+		std::string names;
+		for (QScreen *s : QGuiApplication::screens())
+			names += s->name().toStdString() + ";";
+		std::string sig = address + "|" + c + "|" + k + "|" + (pj ? pj->name().toStdString() : "-") + "|" + choice +
+				  "|" + names;
 		const auto ph = phones();
 		for (auto &p : ph)
 			sig += "|" + p.id + p.name + p.mode + (p.online ? "1" : "0") + ago(p.lastSeen).toStdString();
@@ -146,16 +167,39 @@ public:
 			url->setText(QString::fromStdString(address));
 		}
 		code->setText(QString::fromStdString(c));
+
+		// The list: any screen named OPTOMA (the default), then each connected screen by name
+		screenBox->blockSignals(true);
+		screenBox->clear();
+		screenBox->addItem(QString("Any screen named %1").arg(kProjectorName), QString());
+		bool chosenHere = choice.empty();
+		int n = 1;
+		for (QScreen *s : QGuiApplication::screens()) {
+			const QSize size = s->size() * s->devicePixelRatio();
+			screenBox->addItem(QString("%1 · Screen %2 · %3×%4").arg(s->name()).arg(n++).arg(size.width()).arg(size.height()),
+					   s->name());
+			if (s->name().toStdString() == choice)
+				chosenHere = true;
+		}
+		if (!chosenHere)
+			screenBox->addItem(QString("%1 (not connected)").arg(QString::fromStdString(choice)), QString::fromStdString(choice));
+		const int at = screenBox->findData(QString::fromStdString(choice));
+		screenBox->setCurrentIndex(at < 0 ? 0 : at);
+		screenBox->blockSignals(false);
+
 		if (pj) {
-			projector->setText(QString("Projector: <b>%1</b> is connected. The Projector button opens OBS on it.")
+			projector->setText(QString("<b>%1</b> is connected. The cast button opens OBS on it.")
 						   .arg(pj->name().toHtmlEscaped()));
 			projector->setStyleSheet("color:#3ccf7e;");
+		} else if (choice.empty()) {
+			projector->setText(QString("No screen with <b>%1</b> in its name is connected, so the cast button won't "
+						   "work. Check the projector's HDMI cable, or choose its screen above.")
+						   .arg(kProjectorName));
+			projector->setStyleSheet("color:#ff8a3d;");
 		} else {
-			projector->setText(
-				QString("No screen with <b>%1</b> in its name is connected, so the Projector button won't work."
-					"<br>Connected screens:<br>%2")
-					.arg(kProjectorName)
-					.arg(QString::fromStdString(screens).toHtmlEscaped().replace("\n", "<br>")));
+			projector->setText(QString("<b>%1</b> isn't connected, so the cast button won't work. Check the "
+						   "projector's HDMI cable, or choose another screen above.")
+						   .arg(QString::fromStdString(choice).toHtmlEscaped()));
 			projector->setStyleSheet("color:#ff8a3d;");
 		}
 
@@ -203,6 +247,7 @@ public:
 private:
 	QVBoxLayout *lay = nullptr, *list = nullptr;
 	QLabel *qr = nullptr, *url = nullptr, *code = nullptr, *projector = nullptr;
+	QComboBox *screenBox = nullptr;
 	std::string last;
 };
 

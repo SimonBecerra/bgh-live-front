@@ -37,10 +37,11 @@ The code changes after each phone pairs, and five wrong codes pause pairing for 
   works even while OBS is projecting over the slideshow. The phone shows the slide, the next slide and "5 / 8".
   With anything else full screen on the OPTOMA (Google Slides or Keynote in a browser, a PDF), it presses the
   Left and Right arrow keys on that window, and the phone shows a picture of the projector screen.
-- **Projector.** The cast button opens OBS's Program full screen on the screen with **OPTOMA** in its name, and
-  never anywhere else. Pressing it again asks before closing it, and the slideshow shows again. The panel says
-  whether the OPTOMA is connected and lists every screen's name. To use a different projector, change
-  `kProjectorName` in `src/front.h`.
+- **Projector.** The cast button opens OBS's Program full screen on the projector screen, and never anywhere
+  else. Pressing it again asks before closing it, and the slideshow shows again. Choose the screen in the panel's
+  **Projector screen** list: **Any screen named OPTOMA** (the default) or a particular screen. It's remembered by
+  the screen's name, so Windows numbering screens differently after a restart doesn't move it. The panel shows
+  whether that screen is connected.
 - **Scenes.** Only the five scenes above appear on the phone; other scenes in OBS are ignored. Each needs two taps.
   They're listed in `allowedScenes()` in `src/state.cpp`.
 - **Network.** The installer allows TCP port 8650 through Windows Firewall. Only phones on the same network can reach it.

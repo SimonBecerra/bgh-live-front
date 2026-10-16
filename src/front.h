@@ -24,8 +24,13 @@ class QScreen;
 namespace front {
 
 constexpr int kPort = 8650;
-// Any connected screen with this in its name is the projector. Change it here if the projector changes.
+// Unless a screen is chosen in the dock, any connected screen with this in its name is the projector.
 constexpr const char *kProjectorName = "OPTOMA";
+// The screen chosen in the dock's "Projector screen" list, by name ("" = any screen named OPTOMA). Any thread.
+std::string projectorChoice();
+void setProjectorChoice(const std::string &name);
+// How to name the projector to people: the chosen screen's name, or "OPTOMA"
+std::string projectorLabel();
 // The only OBS scenes the phone shows, in this order. Any other scenes in OBS are ignored.
 const std::vector<std::string> &allowedScenes();
 

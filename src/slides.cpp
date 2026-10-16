@@ -97,12 +97,21 @@ BOOL CALLBACK monEnum(HMONITOR m, HDC, LPRECT, LPARAM p)
 	return TRUE;
 }
 
+std::wstring widen(const std::string &s)
+{
+	if (s.empty())
+		return L"";
+	const int n = MultiByteToWideChar(CP_UTF8, 0, s.c_str(), (int)s.size(), nullptr, 0);
+	std::wstring w((size_t)n, L'\0');
+	MultiByteToWideChar(CP_UTF8, 0, s.c_str(), (int)s.size(), &w[0], n);
+	return w;
+}
+
 HMONITOR projectorMonitor()
 {
-	std::wstring want;
-	for (const char *c = kProjectorName; *c; c++)
-		want += (wchar_t)*c;
-	want = upperW(want);
+	// A screen chosen in the dock is matched by its exact name; otherwise any screen named OPTOMA
+	const std::wstring chosen = widen(projectorChoice());
+	const std::wstring want = upperW(widen(kProjectorName));
 	UINT32 np = 0, nm = 0;
 	if (GetDisplayConfigBufferSizes(QDC_ONLY_ACTIVE_PATHS, &np, &nm) != ERROR_SUCCESS)
 		return nullptr;
@@ -119,15 +128,18 @@ HMONITOR projectorMonitor()
 		tn.header.id = paths[i].targetInfo.id;
 		if (DisplayConfigGetDeviceInfo(&tn.header) != ERROR_SUCCESS)
 			continue;
-		if (upperW(tn.monitorFriendlyDeviceName).find(want) == std::wstring::npos)
-			continue;
 		DISPLAYCONFIG_SOURCE_DEVICE_NAME sn{};
 		sn.header.type = DISPLAYCONFIG_DEVICE_INFO_GET_SOURCE_NAME;
 		sn.header.size = sizeof(sn);
 		sn.header.adapterId = paths[i].sourceInfo.adapterId;
 		sn.header.id = paths[i].sourceInfo.id;
-		if (DisplayConfigGetDeviceInfo(&sn.header) == ERROR_SUCCESS) {
-			f.device = sn.viewGdiDeviceName;
+		if (DisplayConfigGetDeviceInfo(&sn.header) != ERROR_SUCCESS)
+			continue;
+		const std::wstring friendly = tn.monitorFriendlyDeviceName, gdi = sn.viewGdiDeviceName;
+		const bool match = chosen.empty() ? upperW(friendly).find(want) != std::wstring::npos
+						  : (friendly == chosen || gdi == chosen);
+		if (match) {
+			f.device = gdi;
 			break;
 		}
 	}
@@ -218,7 +230,7 @@ std::string sendArrow(int delta)
 {
 	HMONITOR mon = projectorMonitor();
 	if (!mon)
-		return std::string("Can't find the ") + kProjectorName + " projector. Check its HDMI cable.";
+		return "Can't find the " + projectorLabel() + " projector. Check its HDMI cable.";
 	MONITORINFO mi{};
 	mi.cbSize = sizeof(mi);
 	GetMonitorInfoW(mon, &mi);
