@@ -176,6 +176,8 @@ bool invisibleKind(HWND w)
 	BOOL cloaked = FALSE;
 	if (SUCCEEDED(DwmGetWindowAttribute(w, DWMWA_CLOAKED, &cloaked, sizeof(cloaked))) && cloaked)
 		return true;
+	if (className(w) == L"screenClass")
+		return false; // PowerPoint's slide show: it belongs to PowerPoint's main window, but it's what people see
 	if (GetWindow(w, GW_OWNER) && !(ex & WS_EX_APPWINDOW))
 		return true; // owned pop-ups (menus, tooltips)
 	const std::wstring c = className(w);
@@ -772,7 +774,6 @@ void applyOnTop(bool restore)
 	const bool presOnTop = !obs.empty() && pres &&
 			       (mode == "presentation" || (mode == "auto" && isPresentation(pres, monRect)));
 	const bool obsOnTop = mode != "presentation";
-	g_presInFront = presOnTop;
 	// Anything raised before that isn't wanted in front any more goes back to normal
 	for (HWND w : std::vector<HWND>(g_madeTop)) {
 		const bool isObs = std::find(obs.begin(), obs.end(), w) != obs.end();
@@ -791,7 +792,19 @@ void applyOnTop(bool restore)
 				SetWindowPos(pres, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
 				break;
 			}
+	} else if (obsOnTop && pres) {
+		// OBS's projector goes above the presentation. PowerPoint keeps its slide show "always on top" by itself,
+		// so being topmost isn't enough: OBS's projector is put back above it whenever it isn't
+		for (HWND w : obs)
+			if (inFront(pres, w))
+				SetWindowPos(w, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
 	}
+	// What phones are told is what's really in front, not just what was asked for
+	bool presReallyFront = false;
+	for (HWND w : obs)
+		if (pres && inFront(pres, w))
+			presReallyFront = true;
+	g_presInFront = presReallyFront;
 #else
 	(void)restore;
 #endif

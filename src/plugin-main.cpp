@@ -44,9 +44,9 @@ static void startAll()
 	g_timer = new QTimer();
 	g_timer->setInterval(1000);
 	QObject::connect(g_timer, &QTimer::timeout, []() {
+		front::applyOnTop();
 		front::refreshState();
 		front::slidesTick();
-		front::applyOnTop();
 		front::dockRefresh();
 	});
 	g_timer->start();
