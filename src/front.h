@@ -85,7 +85,7 @@ int presenterViewers();
 /* ---- slides.cpp ---- */
 void slidesStart();
 void slidesStop();
-// Next (+1) or back (-1). Returns "" or what went wrong.
+// Next (+1), back (-1), or stop presenting (0). Returns "" or what went wrong.
 std::string slidesStep(int delta);
 // {"app":"PowerPoint","n":3,"total":8,"ratio":"16:9","v":12,"next":true} or with app "" when no slideshow is known
 std::string slidesJson();

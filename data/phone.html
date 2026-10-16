@@ -112,7 +112,9 @@ svg.i{width:20px;height:20px;flex:none;stroke:currentColor;fill:none;stroke-widt
 .sc[aria-pressed="true"]::after{content:"ON";position:absolute;top:5px;right:6px;font-size:10px;font-weight:800;letter-spacing:.06em;color:#fff;background:var(--rec);border-radius:5px;padding:2px 5px}
 
 /* Projector + Record row */
-.acts{flex:none;display:grid;grid-template-columns:1fr;gap:10px}
+.acts{flex:none;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.act.endshow .t svg.i{color:var(--muted)}
+.act.endshow:active:not(:disabled){transform:scale(.98)}
 .gear.pj-btn[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .gear.pj-btn.bounce{animation:pjBounce .6s cubic-bezier(.3,1.6,.5,1)}
 @keyframes pjBounce{0%{transform:scale(1)}30%{transform:scale(1.25)}55%{transform:scale(.92)}75%{transform:scale(1.06)}100%{transform:scale(1)}}
@@ -138,7 +140,7 @@ button.mode-chip svg.i{width:14px;height:14px}
 button.mode-chip:active{transform:scale(.97)}
 .pres{flex:1;min-height:0;display:flex;flex-direction:column;gap:8px}
 .pv-box{flex:1;min-height:0;display:grid;place-items:center;container-type:size}
-.pv-slide{position:relative;width:min(100cqw, calc(100cqh * var(--ar,1.3333)));aspect-ratio:var(--ar,1.3333);max-width:100%;container-type:inline-size;border-radius:12px;overflow:hidden;border:2px solid var(--accent);background:#000;flex:none;cursor:pointer}
+.pv-slide{box-sizing:border-box;position:relative;width:min(100cqw, calc(100cqh * var(--ar,1.3333)));aspect-ratio:var(--ar,1.3333);max-width:100%;container-type:inline-size;border-radius:12px;overflow:hidden;border:2px solid var(--accent);background:#000;flex:none;cursor:pointer}
 .pv-slide .slide .k{font-size:3.4cqw}.pv-slide .slide .h{font-size:8cqw}.pv-slide .slide .b{font-size:4.2cqw}
 .pv-slide.wide .slide{padding:6% 9%}.pv-slide.wide .slide .k{font-size:2.6cqw}.pv-slide.wide .slide .h{font-size:6cqw}.pv-slide.wide .slide .b{font-size:3.2cqw}
 .pv-slide .tag{background:var(--accent);color:var(--accent-ink)}
@@ -277,6 +279,7 @@ const ICON = {
   square:'<rect width="18" height="18" x="3" y="3" rx="2"/>',
   down:'<path d="m6 9 6 6 6-6"/>',
   target:'<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>',
+  stopshow:'<path d="M2 3h20"/><path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3"/><path d="m7 21 5-5 5 5"/><path d="m9.5 7 5 5"/><path d="m14.5 7-5 5"/>',
   cast:'<path d="M2 8V6a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6"/><path d="M2 12a9 9 0 0 1 8 8"/><path d="M2 16a5 5 0 0 1 4 4"/><line x1="2" x2="2.01" y1="20" y2="20"/>',
   ctrl:'<path d="M11.146 15.854a1.207 1.207 0 0 1 1.708 0l1.56 1.56A2 2 0 0 1 15 18.828V21a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1v-2.172a2 2 0 0 1 .586-1.414z"/><path d="M18.828 15a2 2 0 0 1-1.414-.586l-1.56-1.56a1.207 1.207 0 0 1 0-1.708l1.56-1.56A2 2 0 0 1 18.828 9H21a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1z"/><path d="M6.586 14.414A2 2 0 0 1 5.172 15H3a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1h2.172a2 2 0 0 1 1.414.586l1.56 1.56a1.207 1.207 0 0 1 0 1.708z"/><path d="M9 3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2.172a2 2 0 0 1-.586 1.414l-1.56 1.56a1.207 1.207 0 0 1-1.708 0l-1.56-1.56A2 2 0 0 1 9 5.172z"/>'
 };
@@ -443,6 +446,10 @@ function controllerHTML(){
       <span class="t"><i class="rdot"></i>${st.rec ? `<span class="tn" id="recT">${fmt(now() - st.recT0)}</span>` : "Record"}</span>
       <small>${st.rec ? "Recording · tap to stop" : "Not recording"}</small>
     </button>
+    <button class="act endshow" id="endShow" type="button" ${st.pjFound ? "" : "disabled"}>
+      <span class="t">${ic("stopshow")}Stop presenting</span>
+      <small>Closes the slideshow</small>
+    </button>
   </div>`;
 }
 
@@ -487,6 +494,7 @@ function wire(){
       const r = await cmd("proj", {on:true});
       if(r.ok){ S.nudgeUntil = 0; S.pjBounce = true; render(); S.pjBounce = false; toast(`Projecting on the ${(S.st && S.st.pjName) || "OPTOMA"} projector.`); }
     };
+    $("endShow").onclick = () => { S.sheet = endShowHTML; render(); };
     $("rec").onclick = async () => {
       if(S.st && S.st.rec){ S.sheet = stopHTML; render(); return; }
       const r = await cmd("rec", {on:true});
@@ -495,8 +503,22 @@ function wire(){
   }
   if(S.sheet === stopHTML) wireStop();
   if(S.sheet === pjStopHTML) wirePjStop();
+  if(S.sheet === endShowHTML) wireEndShow();
 }
 
+function endShowHTML(){
+  return `<div class="scrim center" id="scrim"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="esH">
+    <h3 id="esH">Are you sure you want to stop presenting?</h3>
+    <p>The slideshow will close on the ${esc((S.st && S.st.pjName) || "OPTOMA")} projector.</p>
+    <div class="row2"><button class="btn quiet" id="esNo" type="button">Keep presenting</button><button class="btn primary" id="esYes" type="button">Stop presenting</button></div>
+  </div></div>`;
+}
+function wireEndShow(){
+  const close = () => { S.sheet = null; render(); };
+  $("esNo").onclick = close;
+  $("scrim").onclick = e => { if(e.target.id === "scrim") close(); };
+  $("esYes").onclick = async () => { S.sheet = null; render(); const r = await cmd("endshow"); if(r.ok) toast("Stopped presenting."); };
+}
 function pjStopHTML(){
   return `<div class="scrim center" id="scrim"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="pjH">
     <h3 id="pjH">Are you sure you want to stop projecting?</h3>

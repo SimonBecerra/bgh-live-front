@@ -300,9 +300,14 @@ void handleCommand(SOCKET s, const Request &r, const std::string &phone)
 	} else if (cmd == "proj") {
 		const bool on = obs_data_get_bool(args, "on");
 		err = onUi([on]() { return setProjecting(on); });
+	} else if (cmd == "endshow") {
+		// Stop presenting: ends PowerPoint's slide show, or presses Escape on the slideshow on the projector
+		err = slidesStep(0);
+		std::this_thread::sleep_for(std::chrono::milliseconds(300));
+		runOnUi([]() { slidesCapture(true); refreshState(); }, 1500);
 	} else if (cmd == "slide") {
 		const int delta = (int)obs_data_get_int(args, "d");
-		err = slidesStep(delta >= 0 ? 1 : -1);
+		err = slidesStep(delta < 0 ? -1 : 1);
 		if (err.empty() && slidesApp() != "PowerPoint") {
 			// A browser slideshow: give it a moment to draw the new slide, grab the projector, and send it.
 			// Once more a little later, for slideshows with a transition.

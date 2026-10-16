@@ -226,6 +226,7 @@ void sendKeyTo(HWND target, WORD vk, bool background)
 		SetForegroundWindow(before);
 }
 
+// delta: +1 Right, -1 Left, 0 Escape (ends the slideshow, or leaves full screen in a browser)
 std::string sendArrow(int delta)
 {
 	HMONITOR mon = projectorMonitor();
@@ -238,7 +239,7 @@ std::string sendArrow(int delta)
 	EnumWindows(winEnum, (LPARAM)&f);
 	if (!f.found)
 		return "There's no slideshow showing on the projector.";
-	sendKeyTo(f.found, delta > 0 ? VK_RIGHT : VK_LEFT, f.coveredByObs);
+	sendKeyTo(f.found, delta > 0 ? VK_RIGHT : delta < 0 ? VK_LEFT : VK_ESCAPE, f.coveredByObs && delta != 0);
 	return "";
 }
 
@@ -449,7 +450,10 @@ void worker()
 		std::vector<std::pair<std::shared_ptr<std::promise<std::string>>, std::string>> results;
 		for (auto &c : cmds) {
 			std::string err;
-			if (s.ok) {
+			if (s.ok && c.delta == 0) {
+				if (FAILED(dispCall(s.view, L"Exit", DISPATCH_METHOD, nullptr, 0, nullptr)))
+					err = "PowerPoint didn't end the slide show.";
+			} else if (s.ok) {
 				if (FAILED(dispCall(s.view, c.delta > 0 ? L"Next" : L"Previous", DISPATCH_METHOD, nullptr, 0,
 						    nullptr)))
 					err = "PowerPoint didn't change the slide.";
