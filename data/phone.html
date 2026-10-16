@@ -211,6 +211,13 @@ button.mode-chip:active{transform:scale(.97)}
 .scrim{position:absolute;inset:0;background:rgba(0,0,0,.55);z-index:20;display:flex;align-items:flex-end}
 .sheet{width:100%;box-sizing:border-box;background:var(--panel);border:1px solid var(--line);border-radius:22px 22px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:14px;max-height:92%;overflow:auto}
 .sheet h3{margin:0;font-size:20px;text-wrap:balance}
+.pj-menu > .btn{width:100%;justify-content:flex-start;gap:12px}
+.pj-menu > .btn.quiet{justify-content:center}
+.swap-icons{display:flex;align-items:center;justify-content:center;gap:14px;color:var(--muted)}
+.swap-icons span{display:grid;place-items:center;width:64px;height:64px;border-radius:16px;border:2px solid var(--line-2);background:var(--panel-2)}
+.swap-icons span svg.i{width:32px;height:32px}
+.swap-icons span.front{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+.swap-icons > svg.i{width:28px;height:28px}
 .scrim.center{align-items:center;justify-content:center;padding:16px}
 .scrim.center .sheet{border-radius:20px;padding-bottom:18px;text-align:center}
 .sheet p{margin:0;color:var(--muted);line-height:1.45;font-size:14px}
@@ -282,6 +289,7 @@ const ICON = {
   down:'<path d="m6 9 6 6 6-6"/>',
   target:'<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>',
   stopshow:'<path d="M2 3h20"/><path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3"/><path d="m7 21 5-5 5 5"/><path d="m9.5 7 5 5"/><path d="m14.5 7-5 5"/>',
+  swap:'<path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/>',
   cast:'<path d="M2 8V6a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6"/><path d="M2 12a9 9 0 0 1 8 8"/><path d="M2 16a5 5 0 0 1 4 4"/><line x1="2" x2="2.01" y1="20" y2="20"/>',
   ctrl:'<path d="M11.146 15.854a1.207 1.207 0 0 1 1.708 0l1.56 1.56A2 2 0 0 1 15 18.828V21a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1v-2.172a2 2 0 0 1 .586-1.414z"/><path d="M18.828 15a2 2 0 0 1-1.414-.586l-1.56-1.56a1.207 1.207 0 0 1 0-1.708l1.56-1.56A2 2 0 0 1 18.828 9H21a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1z"/><path d="M6.586 14.414A2 2 0 0 1 5.172 15H3a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1h2.172a2 2 0 0 1 1.414.586l1.56 1.56a1.207 1.207 0 0 1 0 1.708z"/><path d="M9 3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2.172a2 2 0 0 1-.586 1.414l-1.56 1.56a1.207 1.207 0 0 1-1.708 0l-1.56-1.56A2 2 0 0 1 9 5.172z"/>'
 };
@@ -491,11 +499,7 @@ function wire(){
       if(r.ok && S.st && !S.st.proj){ S.nudgeUntil = Date.now() + 10000; render(); clearTimeout(S.nudgeT); S.nudgeT = setTimeout(render, 10050); }
     });
     $("trBtn").onclick = () => { S.trOpen = !S.trOpen; render(); };
-    $("pjBtn").onclick = async () => {
-      if(S.st && S.st.proj){ S.sheet = pjStopHTML; render(); return; }
-      const r = await cmd("proj", {on:true});
-      if(r.ok){ S.nudgeUntil = 0; S.pjBounce = true; render(); S.pjBounce = false; toast(`Projecting on the ${(S.st && S.st.pjName) || "OPTOMA"} projector.`); }
-    };
+    $("pjBtn").onclick = () => { S.sheet = pjMenuHTML; render(); };
     $("endShow").onclick = () => { S.sheet = endShowHTML; render(); };
     $("rec").onclick = async () => {
       if(S.st && S.st.rec){ S.sheet = stopHTML; render(); return; }
@@ -505,6 +509,8 @@ function wire(){
   }
   if(S.sheet === stopHTML) wireStop();
   if(S.sheet === pjStopHTML) wirePjStop();
+  if(S.sheet === pjMenuHTML) wirePjMenu();
+  if(S.sheet === swapHTML) wireSwap();
   if(S.sheet === endShowHTML) wireEndShow();
 }
 
@@ -520,6 +526,51 @@ function wireEndShow(){
   $("esNo").onclick = close;
   $("scrim").onclick = e => { if(e.target.id === "scrim") close(); };
   $("esYes").onclick = async () => { S.sheet = null; render(); const r = await cmd("endshow"); if(r.ok) toast("Stopped presenting."); };
+}
+/* The cast button: project (or stop), or swap which is in front on the projector */
+function pjMenuHTML(){
+  const st = S.st || {}, name = esc(st.pjName || "OPTOMA");
+  return `<div class="scrim center" id="scrim"><div class="sheet pj-menu" role="dialog" aria-modal="true" aria-labelledby="pmH">
+    <h3 id="pmH">Projector</h3>
+    ${st.proj ? `<button class="btn" id="pmStop" type="button">${ic("cast")}Stop projecting</button>`
+      : `<button class="btn primary" id="pmProj" type="button" ${st.pjFound ? "" : "disabled"}>${ic("cast")}Project on ${name}</button>`}
+    <button class="btn" id="pmSwap" type="button" ${st.pjFound ? "" : "disabled"}>${ic("swap")}Swap presentation and projection</button>
+    <button class="btn quiet" id="pmNo" type="button">Cancel</button>
+  </div></div>`;
+}
+function wirePjMenu(){
+  const close = () => { S.sheet = null; render(); };
+  $("pmNo").onclick = close;
+  $("scrim").onclick = e => { if(e.target.id === "scrim") close(); };
+  if($("pmStop")) $("pmStop").onclick = () => { S.sheet = pjStopHTML; render(); };
+  if($("pmProj")) $("pmProj").onclick = async () => {
+    S.sheet = null; render();
+    const r = await cmd("proj", {on:true});
+    if(r.ok){ S.nudgeUntil = 0; S.pjBounce = true; render(); S.pjBounce = false; toast(`Projecting on the ${(S.st && S.st.pjName) || "OPTOMA"} projector.`); }
+  };
+  $("pmSwap").onclick = () => { S.sheet = swapHTML; render(); };
+}
+function swapHTML(){
+  const st = S.st || {}, presFront = !!st.presFront;
+  return `<div class="scrim center" id="scrim"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="swH">
+    <div class="swap-icons" aria-hidden="true">
+      <span class="${presFront ? "front" : ""}">${ic("proj")}</span>${ic("swap")}<span class="${presFront ? "" : "front"}">${ic("cast")}</span>
+    </div>
+    <h3 id="swH">Are you sure?</h3>
+    <p>${presFront ? "OBS's projection will go in front of the presentation." : "The presentation will go in front of OBS's projection."}</p>
+    <div class="row2"><button class="btn quiet" id="swNo" type="button">Cancel</button><button class="btn primary" id="swYes" type="button">Swap</button></div>
+  </div></div>`;
+}
+function wireSwap(){
+  const close = () => { S.sheet = null; render(); };
+  $("swNo").onclick = close;
+  $("scrim").onclick = e => { if(e.target.id === "scrim") close(); };
+  $("swYes").onclick = async () => {
+    const toPres = !(S.st && S.st.presFront);
+    S.sheet = null; render();
+    const r = await cmd("swap");
+    if(r.ok) toast(toPres ? "The presentation is in front." : "OBS's projection is in front.");
+  };
 }
 function pjStopHTML(){
   return `<div class="scrim center" id="scrim"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="pjH">

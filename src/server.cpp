@@ -306,6 +306,13 @@ void handleCommand(SOCKET s, const Request &r, const std::string &phone)
 	} else if (cmd == "proj") {
 		const bool on = obs_data_get_bool(args, "on");
 		err = onUi([on]() { return setProjecting(on); });
+	} else if (cmd == "swap") {
+		// Swap which is in front on the projector: the presentation or OBS's projector
+		err = onUi([]() {
+			setOnTop(presentationInFront() ? "obs" : "presentation");
+			applyOnTop();
+			return std::string();
+		});
 	} else if (cmd == "endshow") {
 		// Stop presenting: ends PowerPoint's slide show, or presses Escape on the slideshow on the projector
 		err = slidesStep(0);
