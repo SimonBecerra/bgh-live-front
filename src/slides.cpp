@@ -790,14 +790,33 @@ void applyOnTop(bool restore)
 		for (HWND w : obs)
 			if (inFront(w, pres)) {
 				SetWindowPos(pres, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+				// Windows can ignore that while OBS is in the background (nobody has clicked it):
+				// make the presentation the active window, which always puts it in front
+				if (inFront(w, pres)) {
+					bringToFront(pres);
+					SetWindowPos(pres, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+				}
 				break;
 			}
 	} else if (obsOnTop && pres) {
 		// OBS's projector goes above the presentation. PowerPoint keeps its slide show "always on top" by itself,
 		// so being topmost isn't enough: OBS's projector is put back above it whenever it isn't
 		for (HWND w : obs)
-			if (inFront(pres, w))
+			if (inFront(pres, w)) {
 				SetWindowPos(w, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+				// Windows can ignore that while OBS is in the background (nobody has clicked it) and the
+				// presentation was the last thing used: make OBS's projector the active window, then raise it again.
+				// Next and Back still reach PowerPoint, which is controlled directly.
+				if (inFront(pres, w)) {
+					bringToFront(w);
+					SetWindowPos(w, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+					static bool told = false; // once, not every second
+					if (inFront(pres, w) && !told) {
+						told = true;
+						obs_log(LOG_INFO, "Windows kept the presentation in front of OBS's projector");
+					}
+				}
+			}
 	}
 	// What phones are told is what's really in front, not just what was asked for
 	bool presReallyFront = false;
