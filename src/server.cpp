@@ -46,6 +46,7 @@ typedef int SOCKET;
 #include <cstring>
 #include <deque>
 #include <fstream>
+#include <map>
 #include <memory>
 #include <mutex>
 #include <sstream>
@@ -83,9 +84,14 @@ const char *kIcon =
 	"<circle cx=\"960\" cy=\"1392\" r=\"207\" fill=\"none\" stroke=\"#132932\" stroke-width=\"146\"/></svg>";
 
 const char *kManifest =
-	"{\"name\":\"BGH LIVE Front\",\"short_name\":\"BGH Front\",\"start_url\":\"/\",\"display\":\"standalone\","
-	"\"background_color\":\"#0B1418\",\"theme_color\":\"#0B1418\",\"icons\":[{\"src\":\"/icon.svg\",\"sizes\":\"any\","
-	"\"type\":\"image/svg+xml\"}]}";
+	"{\"name\":\"BGH Front Remote\",\"short_name\":\"BGH Front Remote\",\"start_url\":\"/\",\"display\":\"standalone\","
+	"\"background_color\":\"#0B1418\",\"theme_color\":\"#0B1418\",\"icons\":["
+	"{\"src\":\"/icon-192.png\",\"sizes\":\"192x192\",\"type\":\"image/png\"},"
+	"{\"src\":\"/icon-512.png\",\"sizes\":\"512x512\",\"type\":\"image/png\"},"
+	"{\"src\":\"/icon.svg\",\"sizes\":\"any\",\"type\":\"image/svg+xml\"}]}";
+
+// The logo as PNG and ICO files from data/icons, for Safari bookmarks, the home screen and browser tabs
+std::map<std::string, std::pair<std::string, std::string>> g_icons; // path -> (type, bytes)
 
 bool sendAll(SOCKET s, const char *data, size_t len)
 {
@@ -385,6 +391,9 @@ void handle(SOCKET s)
 		respond(s, 200, "text/html; charset=utf-8", g_html.empty() ? "BGH LIVE Front: phone.html is missing." : g_html);
 	} else if (r.method == "GET" && r.path == "/icon.svg") {
 		respond(s, 200, "image/svg+xml", kIcon);
+	} else if (r.method == "GET" && g_icons.count(r.path)) {
+		const auto &icon = g_icons.at(r.path); // read-only once the server has started
+		respond(s, 200, icon.first, icon.second, true);
 	} else if (r.method == "GET" && r.path == "/manifest.json") {
 		respond(s, 200, "application/manifest+json", kManifest);
 	} else if (r.method == "POST" && r.path == "/api/pair") {
@@ -411,8 +420,6 @@ void handle(SOCKET s)
 			else
 				respond(s, 200, "image/png", std::string(png.begin(), png.end()), true); // the URL changes with each slide
 		}
-	} else if (r.method == "GET" && r.path == "/favicon.ico") {
-		respond(s, 404, "text/plain", "");
 	} else {
 		respond(s, 404, "text/plain; charset=utf-8", "Not found");
 	}
@@ -492,6 +499,34 @@ void senderLoop()
 	}
 }
 
+std::string loadFile(const char *name)
+{
+	char *path = obs_module_file(name);
+	if (!path)
+		return "";
+	std::ifstream f(path, std::ios::binary);
+	bfree(path);
+	std::stringstream ss;
+	ss << f.rdbuf();
+	return ss.str();
+}
+
+void loadIcons()
+{
+	const std::pair<const char *, const char *> files[] = {
+		{"icons/apple-touch-icon.png", "image/png"}, {"icons/icon-192.png", "image/png"},
+		{"icons/icon-512.png", "image/png"},         {"icons/favicon-32.png", "image/png"},
+		{"icons/favicon.ico", "image/x-icon"}};
+	for (auto &f : files) {
+		const std::string bytes = loadFile(f.first);
+		if (!bytes.empty())
+			g_icons["/" + std::string(f.first).substr(6)] = {f.second, bytes};
+	}
+	// Safari also asks for these names by itself
+	if (g_icons.count("/apple-touch-icon.png"))
+		g_icons["/apple-touch-icon-precomposed.png"] = g_icons["/apple-touch-icon.png"];
+}
+
 std::string loadHtml()
 {
 	char *path = obs_module_file("phone.html");
@@ -511,6 +546,7 @@ bool serverStart()
 	if (g_run)
 		return true;
 	g_html = loadHtml();
+	loadIcons();
 #ifdef _WIN32
 	WSADATA wsa;
 	if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0)
