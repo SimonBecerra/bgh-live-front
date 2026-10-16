@@ -1,0 +1,558 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0B1418">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="BGH Front">
+<title>BGH LIVE Front</title>
+<link rel="icon" href="/icon.svg">
+<link rel="apple-touch-icon" href="/icon.svg">
+<link rel="manifest" href="/manifest.json">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Spectral:wght@700&display=swap">
+<style>
+:root{
+  --bg:#0B1418; --panel:#101e24; --panel-2:#16282f; --line:#213740; --line-2:#2e4854;
+  --fg:#f5f2ea; --muted:#a8bcc4; --dim:#6f8f9a;
+  --accent:#F5B700; --accent-ink:#132932; --accent-soft:rgba(245,183,0,.16);
+  --rec:#ec4c52; --rec-soft:rgba(236,76,82,.18);
+  --ok:#3ccf7e; --ok-soft:rgba(60,207,126,.16);
+  --warn:#ff8a3d; --warn-soft:rgba(255,138,61,.16);
+  --f-ui:"Inter","Segoe UI",system-ui,-apple-system,sans-serif;
+  --f-brand:"Spectral",Georgia,"Times New Roman",serif;
+  --r:14px;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-ui);font-size:15px;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+button,select,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+svg.i{width:20px;height:20px;flex:none;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.label{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.tn{font-variant-numeric:tabular-nums}
+
+.stage{display:flex;justify-content:center;gap:28px;height:100%;box-sizing:border-box;padding-block:8px 10px;padding-left:max(12px,env(safe-area-inset-left,0px));padding-right:max(12px,env(safe-area-inset-right,0px))}
+.phone{position:relative;width:100%;max-width:430px;min-width:0;height:100%;display:flex;flex-direction:column;gap:10px;min-height:0;overflow:hidden}
+
+/* Header */
+.top{display:flex;flex-direction:column;gap:8px;flex:none}
+.bar1{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.brand{margin:0;display:flex;align-items:baseline;gap:6px;font-size:14px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+.brand{align-items:center}
+.brand b{font-family:var(--f-brand);font-size:18px;letter-spacing:.02em;color:var(--accent)}
+.brand .logo{width:auto;height:28px;flex:none;display:block}
+.pair .brand{flex-direction:column;gap:10px;font-size:15px}
+.top .brand .logo{display:none}
+.pair .brand .logo{height:84px}
+.conn{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);min-width:0;flex:1}
+.conn span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--ok);flex:none}
+.conn.lost .dot{background:var(--warn);animation:blink 1s infinite}
+/* Connected: the blend icon in green */
+.conn svg.blend{width:20px;height:20px;color:var(--ok)}
+.top .conn{justify-content:flex-end}
+.conn-btn{display:grid;place-items:center;width:36px;height:36px;margin:-8px;padding:0;border:0;border-radius:50%;background:none}
+.conn-btn:active{background:var(--ok-soft)}
+@keyframes blink{50%{opacity:.25}}
+.gear[aria-pressed="true"]{border-color:var(--accent);color:var(--accent)}
+.gear{width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:var(--panel);display:grid;place-items:center;color:var(--muted);flex:none}
+.banner{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:12px;background:var(--warn-soft);border:1px solid var(--warn);font-size:13px;line-height:1.4;flex:none}
+.banner svg.i{color:var(--warn)}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:52px;padding:0 16px;border-radius:var(--r);border:1px solid var(--line-2);background:var(--panel-2);font-weight:600;font-size:16px}
+.btn:active:not(:disabled){transform:scale(.98)}
+.btn:disabled{opacity:.4;cursor:default}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.danger{background:var(--rec);border-color:var(--rec);color:#fff}
+.btn.quiet{background:transparent}
+.off .ctl{opacity:.4;pointer-events:none}
+
+/* Slides: the biggest controls, since they're pressed most */
+.slides{flex:none;display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:16px;border:1px solid var(--line);background:var(--panel)}
+.sl-h{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.sl-h b{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sl-h .tn{font-size:13px;color:var(--muted);flex:none}
+.sl-nav{display:grid;grid-template-columns:1fr 2fr;gap:10px}
+.sl-nav .btn{min-height:84px;font-size:18px}
+.sl-nav svg.i{width:30px;height:30px}
+.sl-dots{display:flex;gap:4px}
+.sl-dots i{flex:1;height:4px;border-radius:2px;background:var(--line-2)}
+.sl-dots i.on{background:var(--accent)}
+.sl-dots i.seen{background:var(--dim)}
+
+/* Scenes */
+.sec-h{display:flex;justify-content:space-between;align-items:baseline;flex:none}
+.hint{font-size:12px;color:var(--muted)}
+.scenes{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;gap:8px;grid-template-rows:repeat(var(--rows,3),minmax(44px,1fr))}
+.sc{position:relative;display:flex;align-items:center;gap:10px;min-height:0;padding:6px 12px;border-radius:12px;border:2px solid var(--line);background:var(--panel-2);text-align:left;font-weight:600;font-size:15px;line-height:1.2}
+.sc svg.i{color:var(--muted)}
+.sc.tr,.tr-open{grid-column:1 / -1}
+.sc.tr > span{flex:1;display:flex;flex-direction:column;gap:2px}
+.sc small{font-weight:500;font-size:12px;color:var(--muted)}
+.sc.tr[aria-pressed="true"] small{color:var(--fg)}
+.tr-open{display:grid;grid-template-rows:auto minmax(0,1fr);gap:6px;padding:6px;border-radius:12px;border:2px solid var(--accent);background:var(--accent-soft);min-height:0}
+.tr-head{display:flex;align-items:center;gap:8px;padding:2px 4px;border:0;background:none;font-weight:700;font-size:15px;text-align:left}
+.tr-head span{flex:1}.tr-head svg.i{color:var(--accent)}.tr-head svg.i:last-child{color:var(--muted)}
+.tr-opts{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;min-height:0}
+.sc.opt{justify-content:center;text-align:center;padding:6px;min-height:44px}
+.sc.opt > span{display:flex;flex-direction:column;gap:2px}
+.sc.armed{border-color:var(--accent);background:var(--accent-soft)}
+.sc.armed svg.i{color:var(--accent)}
+.sc .arm{display:block;font-size:12px;font-weight:700;color:var(--accent);animation:blink 1s ease-in-out infinite}
+.sc[aria-pressed="true"]{border-color:var(--rec);background:var(--rec-soft)}
+.sc[aria-pressed="true"] svg.i{color:var(--rec)}
+.sc[aria-pressed="true"]::after{content:"ON";position:absolute;top:5px;right:6px;font-size:10px;font-weight:800;letter-spacing:.06em;color:#fff;background:var(--rec);border-radius:5px;padding:2px 5px}
+
+/* Projector + Record row */
+.acts{flex:none;display:grid;grid-template-columns:1fr;gap:10px}
+.gear.pj-btn[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.gear.pj-btn.bounce{animation:pjBounce .6s cubic-bezier(.3,1.6,.5,1)}
+@keyframes pjBounce{0%{transform:scale(1)}30%{transform:scale(1.25)}55%{transform:scale(.92)}75%{transform:scale(1.06)}100%{transform:scale(1)}}
+.gear.pj-btn.nudge{border-color:var(--accent);color:var(--accent);animation:pjPulse 1.1s ease-out infinite}
+@keyframes pjPulse{0%{box-shadow:0 0 0 0 rgba(245,183,0,.75);transform:scale(1)}40%{transform:scale(1.08)}70%{box-shadow:0 0 0 12px rgba(245,183,0,0);transform:scale(1)}100%{box-shadow:0 0 0 0 rgba(245,183,0,0)}}
+@media (prefers-reduced-motion:reduce){.gear.pj-btn.bounce{animation:none}.gear.pj-btn.nudge{box-shadow:0 0 0 3px rgba(245,183,0,.6)}}
+.act{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:2px;min-height:72px;padding:10px 14px;border-radius:var(--r);border:1px solid var(--line-2);background:var(--panel-2);text-align:left}
+.act .t{display:flex;align-items:center;gap:8px;font-weight:700;font-size:16px}
+.act small{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.act.proj[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.act.proj[aria-pressed="true"] svg.i{color:var(--accent)}
+.act.rec .rdot{width:14px;height:14px;border-radius:50%;background:var(--rec);flex:none}
+.act.rec[aria-pressed="true"]{background:var(--rec);border-color:var(--rec);color:#fff}
+.act.rec[aria-pressed="true"] small{color:rgba(255,255,255,.85)}
+.act.rec[aria-pressed="true"] .rdot{background:#fff;border-radius:3px;animation:blink 1.4s infinite}
+.act:disabled{opacity:.45}
+
+/* Presenter mode: the slide itself fills the phone, with what's next underneath */
+.mode-chip{display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 8px;border-radius:999px;border:1px solid var(--line-2);font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);flex:none}
+.mode-chip.is-pres{border-color:var(--accent);color:var(--accent)}
+button.mode-chip{height:24px;padding:0 10px;background:var(--panel);font-family:inherit}
+button.mode-chip svg.i{width:14px;height:14px}
+button.mode-chip:active{transform:scale(.97)}
+.pres{flex:1;min-height:0;display:flex;flex-direction:column;gap:8px}
+.pv-box{flex:1;min-height:0;display:grid;place-items:center;container-type:size}
+.pv-slide{position:relative;width:min(100cqw, calc(100cqh * var(--ar,1.3333)));aspect-ratio:var(--ar,1.3333);max-width:100%;container-type:inline-size;border-radius:12px;overflow:hidden;border:2px solid var(--accent);background:#000;flex:none;cursor:pointer}
+.pv-slide .slide .k{font-size:3.4cqw}.pv-slide .slide .h{font-size:8cqw}.pv-slide .slide .b{font-size:4.2cqw}
+.pv-slide.wide .slide{padding:6% 9%}.pv-slide.wide .slide .k{font-size:2.6cqw}.pv-slide.wide .slide .h{font-size:6cqw}.pv-slide.wide .slide .b{font-size:3.2cqw}
+.pv-slide .tag{background:var(--accent);color:var(--accent-ink)}
+.next-up{display:grid;grid-template-columns:96px minmax(0,1fr);gap:10px;align-items:center;padding:8px;border-radius:12px;border:1px solid var(--line);background:var(--panel);flex:none}
+.next-up .thumb{position:relative;aspect-ratio:var(--ar,1.3333);border-radius:6px;overflow:hidden;background:#000}
+.next-up .thumb .slide{padding:8%;gap:4%}
+.next-up .thumb .slide .k{font-size:6px}.next-up .thumb .slide .h{font-size:10px}.next-up .thumb .slide .b{display:none}
+.next-up .nt{display:flex;flex-direction:column;gap:2px;min-width:0}
+.next-up .nt b{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.next-up .nt span{font-size:12px;color:var(--muted)}
+.pres-info{display:flex;justify-content:space-between;align-items:baseline;flex:none;font-size:13px;color:var(--muted)}
+.pres-info b{color:var(--fg);font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pres-info{gap:10px;min-width:0;justify-content:flex-end}
+.shape-chip{display:inline-flex;align-items:center;gap:6px;flex:none;font-size:12px;color:var(--muted)}
+.shape-chip i{display:block;height:12px;border:1.5px solid currentColor;border-radius:2px}
+.shape-chip i.r43{width:16px}.shape-chip i.r169{width:21px}
+.pres-nav{flex:none;display:grid;grid-template-columns:56px 1fr;gap:10px}
+.pres-nav #slBack{background:transparent;border-color:var(--line);color:var(--muted)}
+.pres-nav #slBack svg.i{width:26px;height:26px}
+.pres-nav .btn{min-height:128px;font-size:20px}
+.pres-nav svg.i{width:32px;height:32px}
+.pres-nav #slNext{font-size:28px;font-weight:800;gap:2px;flex-direction:column}
+.pres-nav #slNext .count{font-size:14px;font-weight:700;opacity:.8}
+.pres-nav #slNext:disabled{opacity:1;background:var(--panel-2);border-color:var(--line-2);color:var(--muted)}
+.pres-nav #slNext:disabled svg.i{opacity:.35}
+.pres-nav #slNext svg.i{width:52px;height:52px;stroke-width:2.5}
+
+/* Sideways: the slide takes the left, everything else stacks in a column on the right */
+.phone.land{gap:6px}
+.phone.land .top .brand b{font-size:16px}
+.phone.land .top .brand .logo{height:24px}
+.phone.land .gear{width:34px;height:34px}
+.phone.land .pres{container-type:size;display:grid;grid-template-columns:44px auto minmax(150px,1fr);grid-template-rows:auto;align-content:center;gap:6px 12px;
+  grid-template-areas:"back slide next"}
+.phone.land .next-up{display:none}
+.phone.land .pv-box{grid-area:slide;width:min(calc(100cqh * var(--ar,1.3333)), calc(100cqw - 44px - 150px - 24px));height:min(100cqh, calc((100cqw - 44px - 150px - 24px) / var(--ar,1.3333)))}
+.phone.land .pres-info{grid-area:info}
+.phone.land .next-up{grid-area:up;grid-template-columns:auto minmax(0,1fr);padding:4px 8px;gap:8px}
+.phone.land .next-up .thumb{height:34px;width:auto}
+.phone.land .next-up .nt{flex-direction:row;align-items:baseline;gap:8px}
+.phone.land .sl-dots{grid-area:dots}
+.phone.land .pres-nav{display:contents}
+.phone.land #slBack{grid-area:back}
+.phone.land #slNext{grid-area:next;flex-direction:column;gap:6px}
+.phone.land .pres-nav .btn{min-height:0;height:100%;padding:0 8px}
+.phone.land .scenes{grid-template-rows:repeat(2,minmax(40px,1fr))}
+.phone.land .acts .act{min-height:56px}
+/* Rotation lock on: the remote turns itself sideways on screen */
+.phone.turned{position:fixed;top:0;left:0;z-index:5;max-width:none;width:100vh;width:100dvh;height:100vw;box-sizing:border-box;
+  padding:max(8px,env(safe-area-inset-left,0px)) 12px;background:var(--bg);transform-origin:top left;transform:rotate(90deg) translateY(-100%)}
+
+/* Choosing a mode */
+.modes{display:flex;flex-direction:column;gap:12px}
+.mode-card{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 14px;align-items:center;padding:16px;border-radius:16px;border:2px solid var(--line-2);background:var(--panel);text-align:left}
+.mode-card svg.i{grid-row:span 2;width:48px;height:48px;color:var(--accent)}
+.mode-card b{font-size:24px}
+.mode-card span{font-size:15px;color:var(--muted);line-height:1.4}
+.pair .mode-card{min-height:140px;padding:20px 22px;gap:2px 18px;border-radius:20px;align-content:center}
+.pair .modes{gap:16px}
+.mode-card[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border:1px solid var(--line-2);border-radius:12px;background:var(--bg)}
+.seg button{min-height:44px;border:0;border-radius:9px;background:transparent;font-weight:600}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+
+/* Sheets */
+.scrim{position:absolute;inset:0;background:rgba(0,0,0,.55);z-index:20;display:flex;align-items:flex-end}
+.sheet{width:100%;box-sizing:border-box;background:var(--panel);border:1px solid var(--line);border-radius:22px 22px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:14px;max-height:92%;overflow:auto}
+.sheet h3{margin:0;font-size:20px;text-wrap:balance}
+.scrim.center{align-items:center;justify-content:center;padding:16px}
+.scrim.center .sheet{border-radius:20px;padding-bottom:18px;text-align:center}
+.sheet p{margin:0;color:var(--muted);line-height:1.45;font-size:14px}
+.field{display:flex;flex-direction:column;gap:6px}
+.field select{min-height:48px;border-radius:10px;border:1px solid var(--line-2);background:var(--bg);padding:0 12px;font-size:15px}
+.mons{display:flex;gap:12px;align-items:flex-end}
+.mon-pick{display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px;border-radius:12px;border:2px solid var(--line-2);background:var(--bg);font-size:12px;color:var(--muted)}
+.mon-pick .shape{display:grid;place-items:center;height:54px;border-radius:5px;border:2px solid currentColor;font-weight:800;font-size:18px}
+.mon-pick .shape.w{width:96px}.mon-pick .shape.n{width:72px}
+.mon-pick[aria-pressed="true"]{border-color:var(--accent);color:var(--fg);background:var(--accent-soft)}
+.txt{min-height:48px;border-radius:10px;border:1px solid var(--line-2);background:var(--bg);padding:0 12px;font-size:16px;box-sizing:border-box;width:100%}
+.screens-list{display:flex;flex-direction:column;gap:6px}
+.scr-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;border:1px solid var(--line);font-size:14px}
+.scr-row .shape{height:18px;border:2px solid var(--dim);border-radius:3px;flex:none}.scr-row .shape.w{width:32px}.scr-row .shape.n{width:24px}
+.scr-row .nm{flex:1;min-width:0;display:flex;flex-direction:column}.scr-row small{color:var(--muted);font-size:12px}
+.scr-row b{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent-ink);background:var(--accent);padding:2px 7px;border-radius:5px}
+.scr-row.hit{border-color:var(--accent);background:var(--accent-soft)}.scr-row.hit .shape{border-color:var(--accent)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+/* Pairing */
+.pair{display:flex;flex-direction:column;align-items:center;gap:18px;padding-block:28px 10px;text-align:center}
+.pair > *{max-width:100%}
+.phone > .pair{flex:1;min-height:0;box-sizing:border-box}
+.pair .code{margin-block:auto 0}
+.pair .code + .err{margin-bottom:auto;padding-bottom:min(18vh,120px)}
+.pair .brand{justify-content:center}
+.pair .modes{width:100%}
+.pair .banner{text-align:left}
+.pair h2{margin:0;font-size:26px;text-wrap:balance}
+.pair p{margin:0;color:var(--muted);line-height:1.5}
+.code{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;max-width:260px;margin:0 auto;width:100%}
+.code input{height:72px;border-radius:14px;border:1px solid var(--line-2);background:var(--panel);text-align:center;font-size:32px;font-weight:700;width:100%;box-sizing:border-box;min-width:0}
+.err{color:var(--rec);font-size:14px;min-height:20px}
+
+.toast{position:absolute;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:999px;font-weight:600;font-size:14px;z-index:30;width:max-content;max-width:calc(100% - 32px);text-align:center}
+
+/* Real-app additions */
+html,body{margin:0}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);box-sizing:border-box;height:100%}
+.pv-slide img{display:block;width:100%;height:100%;object-fit:contain;background:#000}
+.next-up .thumb img{display:block;width:100%;height:100%;object-fit:contain}
+.pv-empty{position:absolute;inset:0;display:grid;place-items:center;padding:12%;box-sizing:border-box;text-align:center;color:var(--muted);font-size:15px;line-height:1.45}
+.sc:disabled{opacity:.45}
+</style>
+</head>
+<body>
+<div class="stage"><main class="phone" id="phone" aria-live="polite"></main></div>
+<script>
+const ICON = {
+  back:'<path d="m15 18-6-6 6-6"/>', fwd:'<path d="m9 18 6-6-6-6"/>',
+  gear:'<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>',
+  proj:'<path d="M2 3h20"/><path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3"/><path d="m7 21 5-5 5 5"/>',
+  video:'<path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"/><rect x="2" y="6" width="14" height="12" rx="2"/>',
+  hourglass:'<path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22"/><path d="M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2"/>',
+  slides:'<rect width="20" height="14" x="2" y="3" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/>',
+  flag:'<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/>',
+  wifi:'<path d="M12 20h.01"/><path d="M8.5 16.43a5 5 0 0 1 7 0"/><path d="M5 12.86a10 10 0 0 1 5.17-2.69"/><path d="M19 12.86a10 10 0 0 0-2-1.39"/><path d="M2 8.82a15 15 0 0 1 4.18-2.65"/><path d="M22 8.82a15 15 0 0 0-11.29-3.76"/><line x1="2" x2="22" y1="2" y2="22"/>',
+  x:'<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+  rotate:'<path d="M12 5H6a2 2 0 0 0-2 2v3"/><path d="m9 8 3-3-3-3"/><path d="M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/>',
+  mic:'<path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/>',
+  square:'<rect width="18" height="18" x="3" y="3" rx="2"/>',
+  down:'<path d="m6 9 6 6 6-6"/>',
+  target:'<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>',
+  cast:'<path d="M2 8V6a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6"/><path d="M2 12a9 9 0 0 1 8 8"/><path d="M2 16a5 5 0 0 1 4 4"/><line x1="2" x2="2.01" y1="20" y2="20"/>',
+  ctrl:'<path d="M11.146 15.854a1.207 1.207 0 0 1 1.708 0l1.56 1.56A2 2 0 0 1 15 18.828V21a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1v-2.172a2 2 0 0 1 .586-1.414z"/><path d="M18.828 15a2 2 0 0 1-1.414-.586l-1.56-1.56a1.207 1.207 0 0 1 0-1.708l1.56-1.56A2 2 0 0 1 18.828 9H21a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1z"/><path d="M6.586 14.414A2 2 0 0 1 5.172 15H3a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1h2.172a2 2 0 0 1 1.414.586l1.56 1.56a1.207 1.207 0 0 1 0 1.708z"/><path d="M9 3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2.172a2 2 0 0 1-.586 1.414l-1.56 1.56a1.207 1.207 0 0 1-1.708 0l-1.56-1.56A2 2 0 0 1 9 5.172z"/>'
+};
+
+"use strict";
+/* BGH LIVE Front: the phone remote. Served by the OBS plug-in on the front laptop (port 8650).
+   Everything shown comes from the laptop; every tap is a request the laptop carries out. */
+const LOGO = `<svg class="logo" viewBox="412 0 1096 1920" aria-hidden="true"><rect x="412" y="0" width="1096" height="1920" rx="182" fill="#F5B700"/><path d="M756 332h129v455h279v105H756z" fill="#132932"/><circle cx="960" cy="1392" r="207" fill="none" stroke="#132932" stroke-width="146"/></svg>`;
+const BLEND = `<svg class="i blend" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="9" r="7"/><circle cx="15" cy="15" r="7"/></svg>`;
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const ic = n => `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${ICON[n] || ""}</svg>`;
+const fmt = ms => { const s = Math.max(0, Math.floor(ms / 1000)); return [Math.floor(s / 3600), Math.floor(s / 60) % 60, s % 60].map(n => String(n).padStart(2, "0")).join(":"); };
+const ls = {get(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }, set(k, v){ try{ v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); }catch(e){} }};
+
+const S = {
+  token:ls.get("bghFrontToken") || "", mode:ls.get("bghFrontMode"), turn:ls.get("bghFrontTurn") === "1",
+  st:null, connected:false, offset:0, note:"", sheet:null, armed:null, armT:null, trOpen:false,
+  nudgeUntil:0, nudgeT:null, pjBounce:false, toastT:null, x0:null, busy:false
+};
+if(!["presenter", "controller"].includes(S.mode)) S.mode = null;
+const now = () => Date.now() + S.offset;   // the laptop's clock
+const mqLand = matchMedia("(orientation: landscape)");
+const physLand = () => mqLand.matches;
+const isLand = () => S.mode === "presenter" && (S.turn || physLand());
+const isTurned = () => isLand() && S.turn && !physLand();
+const live = () => S.connected && !!S.st;
+(mqLand.addEventListener ? mqLand.addEventListener("change", () => render()) : mqLand.addListener(() => render()));
+
+/* ---------------------------------------------------------------- talking to the laptop */
+let es = null, retryT = null;
+function connect(){
+  clearTimeout(retryT);
+  if(es){ es.close(); es = null; }
+  if(!S.token || !S.mode) return;
+  es = new EventSource(`/api/events?t=${encodeURIComponent(S.token)}&mode=${S.mode}`);
+  es.addEventListener("hello", e => { const d = JSON.parse(e.data); S.offset = (d.now || Date.now()) - Date.now(); S.connected = true; render(); });
+  es.addEventListener("state", e => { S.st = JSON.parse(e.data); S.connected = true; if(S.armed && S.st.program === S.armed) S.armed = null; render(); });
+  es.addEventListener("unpaired", () => unpair("This phone was removed on the front laptop. Pair it again to use it."));
+  es.onopen = () => { S.connected = true; render(); };
+  es.onerror = async () => {
+    if(es && es.readyState !== 2){ if(S.connected){ S.connected = false; render(); } return; }   // the browser retries by itself
+    S.connected = false; render();
+    try{
+      const r = await fetch("/api/cmd", {method:"POST", headers:{"Content-Type":"application/json", "Authorization":"Bearer " + S.token}, body:JSON.stringify({cmd:"ping"})});
+      if(r.status === 401) return unpair("This phone isn't paired with the front laptop any more. Pair it again to use it.");
+    }catch(e){}
+    retryT = setTimeout(connect, 3000);
+  };
+}
+document.addEventListener("visibilitychange", () => { if(!document.hidden && S.token && S.mode && (!es || es.readyState === 2)) connect(); });
+
+function unpair(note){
+  S.token = ""; S.st = null; S.note = note || ""; S.sheet = null;
+  ls.set("bghFrontToken", null);
+  if(es){ es.close(); es = null; }
+  render();
+}
+async function cmd(c, args = {}){
+  let r;
+  try{ r = await fetch("/api/cmd", {method:"POST", headers:{"Content-Type":"application/json", "Authorization":"Bearer " + S.token}, body:JSON.stringify({cmd:c, args})}); }
+  catch(e){ toast("Can't reach the front laptop. Check this phone is on the church Wi-Fi."); return {ok:false}; }
+  if(r.status === 401){ unpair("This phone isn't paired with the front laptop any more. Pair it again to use it."); return {ok:false}; }
+  let j = {ok:false}; try{ j = await r.json(); }catch(e){}
+  if(!j.ok && j.error) toast(j.error);
+  return j;
+}
+
+/* ---------------------------------------------------------------- drawing */
+function headerHTML(){
+  const pres = S.mode === "presenter", st = S.st || {};
+  return `<header class="top"><div class="bar1">
+      <h1 class="brand">${LOGO}<span><b>BGH</b> LIVE Front</span></h1>
+      <button class="mode-chip ${pres ? "is-pres" : ""}" id="modeSwap" type="button" aria-label="${pres ? "Presenter mode. Tap to switch to Controller" : "Controller mode. Tap to switch to Presenter"}">${pres ? "Presenter" : "Controller"}</button>
+      <div class="conn ${live() ? "" : "lost"}" role="status" aria-label="${live() ? "Connected to Device" : "Reconnecting"}">${live() ? `<button class="conn-btn" id="connBtn" type="button" aria-label="Connected to Device">${BLEND}</button>` : `<i class="dot"></i><span>Reconnecting…</span>`}</div>
+      ${pres && !physLand() ? `<button class="gear" id="turn" type="button" aria-pressed="${S.turn}" aria-label="${S.turn ? "Turn upright" : "Turn sideways"}">${ic("rotate")}</button>` : ""}
+      ${pres ? "" : `<button class="gear pj-btn${!st.proj && S.nudgeUntil > Date.now() ? " nudge" : ""}${S.pjBounce ? " bounce" : ""}" id="pjBtn" type="button" aria-pressed="${!!st.proj}" aria-label="${st.proj ? "Projecting on the OPTOMA projector. Tap to stop" : "Project Program on the OPTOMA projector"}">${ic("cast")}</button>`}
+    </div></header>
+  ${!live() ? `<div class="banner">${ic("wifi")}<div><b>Can't reach the front laptop.</b> Check OBS is open on it and this phone is on the church Wi-Fi. It reconnects by itself.</div></div>` : ""}`;
+}
+
+function render(){
+  const P = $("phone");
+  if(!S.token){ P.className = "phone"; P.innerHTML = pairHTML(); wirePair(); return; }
+  if(!S.mode){ P.className = "phone"; P.innerHTML = modePickHTML(); wireModePick(); return; }
+  if(!es) connect();
+  P.className = "phone" + (live() ? "" : " off") + (isLand() ? " land" : "") + (isTurned() ? " turned" : "");
+  P.innerHTML = headerHTML() + (S.mode === "presenter" ? presenterHTML() : controllerHTML())
+    + (S.sheet ? S.sheet() : "") + `<div class="toast" id="toast" role="status" hidden></div>`;
+  wire();
+}
+
+/* Presenter: what's on the projector, what's next, and two big buttons */
+function presenterHTML(){
+  const st = S.st || {}, g = st.slides || {}, pp = g.app === "PowerPoint";
+  const ar = g.ratio === "16:9" ? 16 / 9 : 4 / 3, wide = g.ratio === "16:9";
+  const img = k => `/api/img?t=${encodeURIComponent(S.token)}&k=${k}&v=${g.v || 0}`;
+  const tag = st.proj ? (pp ? "HIDDEN BEHIND OBS" : "OBS ON PROJECTOR") : "ON PROJECTOR";
+  const empty = !st.pjFound ? `The ${esc(st.pjName || "OPTOMA")} projector isn't connected to the laptop.` : "Nothing is showing on the projector yet.";
+  const atEnd = pp && g.total && g.n >= g.total, atStart = pp && g.n <= 1;
+  const nextUp = !pp ? "" : `<div class="next-up">${g.next ? `<div class="thumb"><img src="${img("next")}" alt=""></div><div class="nt"><span>Up next</span><b>Slide ${g.n + 1}</b></div>`
+    : `<div class="thumb"></div><div class="nt"><span>Up next</span><b>End of slideshow</b></div>`}</div>`;
+  return `<div class="pres ctl" style="--ar:${ar}">
+    <div class="pv-box"><div class="pv-slide${wide ? " wide" : ""}" id="pvSlide" role="img" aria-label="${pp ? `Slide ${g.n} of ${g.total}` : "The projector"}">
+      ${g.img ? `<img src="${img("cur")}" alt="">` : `<div class="pv-empty">${empty}</div>`}<span class="tag">${tag}</span></div></div>
+    ${nextUp}
+    <div class="pres-nav">
+      <button class="btn" id="slBack" type="button" aria-label="Previous slide" ${atStart ? "disabled" : ""}>${ic("back")}</button>
+      <button class="btn primary" id="slNext" type="button" aria-label="Next slide" ${atEnd ? "disabled" : ""}>${ic("fwd")}${pp && g.total ? `<span class="count tn">${g.n} / ${g.total}</span>` : ""}</button>
+    </div>
+  </div>`;
+}
+
+/* The three translator scenes live behind one Translator button; tapping it opens the three choices in its place.
+   Every scene needs two taps: the first arms it for 3 seconds, the second switches. */
+const isTr = s => / Translator$/.test(s.label);
+const lang = s => s.label.replace(/ Translator$/, "");
+const armed = s => S.armed === s.label && S.st && S.st.program !== s.label;
+function translatorHTML(scenes){
+  const tr = scenes.filter(isTr), on = tr.find(s => s.label === S.st.program);
+  if(!S.trOpen) return `<button class="sc tr" id="trBtn" type="button" aria-expanded="false" aria-pressed="${!!on}">${ic("mic")}<span>Translator<small>${on ? `${esc(lang(on))} is on` : tr.map(lang).join(" · ")}</small></span>${ic("down")}</button>`;
+  return `<div class="tr-open"><button class="tr-head" id="trBtn" type="button" aria-expanded="true">${ic("mic")}<span>Translator</span>${ic("x")}</button>
+    <div class="tr-opts">${tr.map(s => `<button class="sc opt${armed(s) ? " armed" : ""}" type="button" data-sc="${esc(s.label)}" aria-pressed="${S.st.program === s.label}" ${s.here ? "" : "disabled"}><span>${esc(lang(s))}${armed(s) ? `<small class="arm">Tap again</small>` : !s.here ? "<small>Not in OBS</small>" : ""}</span></button>`).join("")}</div></div>`;
+}
+const SCENE_ICON = {"Baptism Cam":"video", "Black":"square"};
+function controllerHTML(){
+  const st = S.st || {program:"", scenes:[], rec:false, recT0:0};
+  const scenes = st.scenes || [];
+  return `<div class="scenes ctl" style="--rows:2">
+    ${translatorHTML(scenes)}
+    ${scenes.filter(s => !isTr(s)).map(s => `<button class="sc${armed(s) ? " armed" : ""}" type="button" data-sc="${esc(s.label)}" aria-pressed="${st.program === s.label}" ${s.here ? "" : "disabled"}>${ic(SCENE_ICON[s.label] || "video")}<span>${esc(s.label)}${armed(s) ? `<small class="arm">Tap again to switch</small>` : !s.here ? "<small>Not in OBS</small>" : ""}</span></button>`).join("")}
+  </div>
+  <div class="acts ctl">
+    <button class="act rec" id="rec" type="button" aria-pressed="${!!st.rec}">
+      <span class="t"><i class="rdot"></i>${st.rec ? `<span class="tn" id="recT">${fmt(now() - st.recT0)}</span>` : "Record"}</span>
+      <small>${st.rec ? "Recording · tap to stop" : "Not recording"}</small>
+    </button>
+  </div>`;
+}
+
+function wire(){
+  $("modeSwap").onclick = () => { setMode(S.mode === "presenter" ? "controller" : "presenter"); toast(S.mode === "presenter" ? "Presenter mode" : "Controller mode"); };
+  if($("connBtn")) $("connBtn").onclick = () => toast("Connected to Device");
+  if($("turn")) $("turn").onclick = () => { S.turn = !S.turn; ls.set("bghFrontTurn", S.turn ? "1" : null); render(); };
+  if(S.mode === "presenter"){
+    const step = async d => { const r = await cmd("slide", {d}); return r; };
+    $("slBack").onclick = () => step(-1);
+    $("slNext").onclick = () => step(1);
+    // Tap the slide's right side for next, the left side for back; or swipe
+    const pv = $("pvSlide");
+    pv.onpointerdown = e => { S.x0 = e.clientX; };
+    pv.onpointerup = e => {
+      const dx = S.x0 == null ? 0 : e.clientX - S.x0; S.x0 = null;
+      if(Math.abs(dx) > 40) return step(dx < 0 ? 1 : -1);
+      const r = pv.getBoundingClientRect();
+      step(e.clientX - r.left > r.width / 3 ? 1 : -1);
+    };
+  } else {
+    document.querySelectorAll("[data-sc]").forEach(b => b.onclick = async () => {
+      const label = b.dataset.sc;
+      if(S.st && S.st.program === label) return;   // already on
+      clearTimeout(S.armT);
+      if(S.armed !== label){ S.armed = label; render(); S.armT = setTimeout(() => { S.armed = null; render(); }, 3000); return; }
+      S.armed = null; S.trOpen = false; render();
+      const r = await cmd("scene", {label});
+      // Switched a scene but OBS isn't on the projector: the projector button pulses for 10 seconds
+      if(r.ok && S.st && !S.st.proj){ S.nudgeUntil = Date.now() + 10000; render(); clearTimeout(S.nudgeT); S.nudgeT = setTimeout(render, 10050); }
+    });
+    $("trBtn").onclick = () => { S.trOpen = !S.trOpen; render(); };
+    $("pjBtn").onclick = async () => {
+      if(S.st && S.st.proj){ S.sheet = pjStopHTML; render(); return; }
+      const r = await cmd("proj", {on:true});
+      if(r.ok){ S.nudgeUntil = 0; S.pjBounce = true; render(); S.pjBounce = false; toast(`Projecting on the ${(S.st && S.st.pjName) || "OPTOMA"} projector.`); }
+    };
+    $("rec").onclick = async () => {
+      if(S.st && S.st.rec){ S.sheet = stopHTML; render(); return; }
+      const r = await cmd("rec", {on:true});
+      if(r.ok) toast("Recording started.");
+    };
+  }
+  if(S.sheet === stopHTML) wireStop();
+  if(S.sheet === pjStopHTML) wirePjStop();
+}
+
+function pjStopHTML(){
+  return `<div class="scrim center" id="scrim"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="pjH">
+    <h3 id="pjH">Are you sure you want to stop projecting?</h3>
+    <p>OBS will close on the ${esc((S.st && S.st.pjName) || "OPTOMA")} projector and the slideshow will show again.</p>
+    <div class="row2"><button class="btn quiet" id="pjNo" type="button">Keep projecting</button><button class="btn primary" id="pjYes" type="button">Stop projecting</button></div>
+  </div></div>`;
+}
+function wirePjStop(){
+  const close = () => { S.sheet = null; render(); };
+  $("pjNo").onclick = close;
+  $("scrim").onclick = e => { if(e.target.id === "scrim") close(); };
+  $("pjYes").onclick = async () => { S.sheet = null; render(); const r = await cmd("proj", {on:false}); if(r.ok) toast("Stopped projecting."); };
+}
+/* Stopping a recording asks first: a stray tap would cut the sermon in half */
+function stopHTML(){
+  const st = S.st || {};
+  return `<div class="scrim" id="scrim"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="stopH">
+    <h3 id="stopH">Stop recording?</h3>
+    <p>OBS has been recording for ${fmt(now() - (st.recT0 || now()))}. Stopping saves the file on the front laptop.</p>
+    <div class="row2"><button class="btn quiet" id="stopNo" type="button">Keep recording</button><button class="btn danger" id="stopYes" type="button">Stop recording</button></div>
+  </div></div>`;
+}
+function wireStop(){
+  $("stopNo").onclick = () => { S.sheet = null; render(); };
+  $("scrim").onclick = e => { if(e.target.id === "scrim"){ S.sheet = null; render(); } };
+  $("stopYes").onclick = async () => { S.sheet = null; render(); const r = await cmd("rec", {on:false}); if(r.ok) toast("Recording saved on the front laptop."); };
+}
+
+/* After pairing, each phone says how it will be used */
+const MODE_INFO = {
+  presenter:{icon:"slides", name:"Presenter", text:"Manage Slideshow"},
+  controller:{icon:"ctrl", name:"Controller", text:"Manage Live Translator, Baptism Cam"}
+};
+function modePickHTML(){
+  return `<div class="pair">
+    <h1 class="brand">${LOGO}<span><b>BGH</b> LIVE Front</span></h1>
+    <h2>How will you use this phone?</h2>
+    <div class="modes">${Object.entries(MODE_INFO).map(([k, m]) => `<button class="mode-card" type="button" data-mode="${k}">${ic(m.icon)}<b>${m.name}</b><span>${m.text}</span></button>`).join("")}</div>
+  </div><div class="toast" id="toast" role="status" hidden></div>`;
+}
+function wireModePick(){
+  document.querySelectorAll("[data-mode]").forEach(b => b.onclick = () => setMode(b.dataset.mode));
+}
+function setMode(m){
+  S.mode = m; ls.set("bghFrontMode", m); S.sheet = null; S.armed = null; S.trOpen = false;
+  if(es && es.readyState !== 2) cmd("mode", {mode:m}); else connect();
+  render();
+}
+
+/* Pairing: the QR code in OBS pairs by itself; otherwise type the 3-digit code shown there */
+function pairHTML(){
+  return `<div class="pair">
+    <h1 class="brand">${LOGO}<span><b>BGH</b> LIVE Front</span></h1>
+    <h2>Pair this phone with the front laptop</h2>
+    ${S.note ? `<div class="banner">${ic("wifi")}<div>${esc(S.note)}</div></div>` : ""}
+    <p>On the laptop, find the <b>BGH LIVE Front</b> panel in OBS. Scan its QR code with this phone's camera, or type the code it shows.</p>
+    <div class="code">${[0, 1, 2].map(k => `<input id="c${k}" inputmode="numeric" maxlength="1" autocomplete="off" aria-label="Digit ${k + 1}">`).join("")}</div>
+    <div class="err" id="pairErr" role="alert"></div>
+  </div><div class="toast" id="toast" role="status" hidden></div>`;
+}
+async function tryPair(body){
+  if(S.busy) return;
+  S.busy = true;
+  let j = {};
+  try{ const r = await fetch("/api/pair", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)}); j = await r.json(); }
+  catch(e){ S.busy = false; if($("pairErr")) $("pairErr").textContent = "Can't reach the front laptop. Check this phone is on the church Wi-Fi and OBS is open."; return; }
+  S.busy = false;
+  if(j.token){ S.token = j.token; S.note = ""; ls.set("bghFrontToken", j.token); history.replaceState(null, "", "/"); render(); toast("Paired with the front laptop."); return; }
+  const msg = j.code === "LOCKED" ? `Too many wrong codes. Try again in ${Math.ceil((j.wait || 300) / 60)} minutes.`
+    : body.key ? "That QR code has already been used. Scan the new one in OBS, or type the code."
+    : "That code didn't match. Check the code in OBS and try again.";
+  if($("pairErr")) $("pairErr").textContent = msg;
+  else { S.note = msg; render(); }
+}
+function wirePair(){
+  const ins = [0, 1, 2].map(k => $("c" + k));
+  ins.forEach((el, k) => {
+    el.oninput = () => {
+      const d = el.value.replace(/\D/g, "");
+      if(d.length > 1){ d.slice(0, 3).split("").forEach((x, i) => { if(ins[k + i]) ins[k + i].value = x; }); }   // pasted or autofilled
+      else el.value = d;
+      const nx = ins.find(x => !x.value); if(nx && el.value) nx.focus();
+      const code = ins.map(x => x.value).join("");
+      if(code.length === 3){ tryPair({code}); ins.forEach(x => x.value = ""); ins[0].focus(); }
+    };
+    el.onkeydown = e => { if(e.key === "Backspace" && !el.value && k > 0) ins[k - 1].focus(); };
+  });
+}
+
+function toast(msg){
+  const t = $("toast"); if(!t) return;
+  t.textContent = msg; t.hidden = false;
+  clearTimeout(S.toastT); S.toastT = setTimeout(() => { const x = $("toast"); if(x) x.hidden = true; }, 2600);
+}
+
+// The recording timer ticks without redrawing everything
+setInterval(() => { const t = $("recT"); if(t && S.st && S.st.rec) t.textContent = fmt(now() - S.st.recT0); }, 1000);
+
+// Opened from the QR code in OBS: pair straight away
+const qrKey = new URLSearchParams(location.search).get("k");
+if(qrKey && !S.token){ render(); tryPair({key:qrKey}); }
+else { if(qrKey) history.replaceState(null, "", "/"); render(); }
+</script>
+</body>
+</html>

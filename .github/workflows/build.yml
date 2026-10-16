@@ -1,0 +1,57 @@
+# Builds BGH LIVE Front every time something is pushed to main:
+#   1. compiles the OBS plug-in for Windows (OBS's own plug-in build scripts)
+#   2. makes the installer, BGH-LIVE-Front-Setup.exe
+#   3. publishes it as the newest GitHub release, so this link always downloads the latest version:
+#      https://github.com/SimonBecerra/bgh-live-front/releases/latest/download/BGH-LIVE-Front-Setup.exe
+name: Build
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  windows:
+    name: Build the Windows installer
+    runs-on: windows-2022
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build the plug-in
+        run: .github/scripts/Build-Windows.ps1 -Target x64 -Configuration RelWithDebInfo
+
+      - name: Build the installer
+        run: |
+          $spec = Get-Content buildspec.json -Raw | ConvertFrom-Json
+          $version = "$($spec.version).$env:GITHUB_RUN_NUMBER"
+          "FRONT_VERSION=$version" >> $env:GITHUB_ENV
+          $env:FRONT_VERSION = $version
+          $plugin = "release/RelWithDebInfo/bgh-live-front"
+          if (!(Test-Path "$plugin/bin/64bit/bgh-live-front.dll")) { Get-ChildItem -Recurse release | Select-Object FullName; throw "bgh-live-front.dll wasn't built" }
+          if (!(Test-Path "$plugin/data/phone.html")) { throw "data/phone.html is missing from the build" }
+          Set-Content -Path "$plugin/data/version.txt" -Value $version -NoNewline
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (!(Test-Path $iscc)) { choco install innosetup -y --no-progress | Out-Null }
+          & $iscc installer/front.iss
+          if ($LASTEXITCODE -ne 0) { throw "The installer didn't build" }
+          Get-ChildItem dist
+
+      - name: Upload the installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: BGH-LIVE-Front-Setup
+          path: dist/BGH-LIVE-Front-Setup.exe
+          if-no-files-found: error
+
+      - name: Publish the download
+        if: github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = "v$env:FRONT_VERSION"
+          gh release create $tag dist/BGH-LIVE-Front-Setup.exe --title "BGH LIVE Front $env:FRONT_VERSION" --latest `
+            --notes "Download BGH-LIVE-Front-Setup.exe below and run it on the front laptop with OBS closed. Windows may say it protected your PC: click More info, then Run anyway."
+          if ($LASTEXITCODE -ne 0) { throw "The release wasn't published" }
