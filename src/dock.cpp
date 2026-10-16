@@ -75,6 +75,8 @@ class FrontDock : public QWidget {
 public:
 	FrontDock()
 	{
+		// Never shrinks to a sliver: room for the QR code and the settings, whatever OBS's layout does
+		setMinimumSize(280, 360);
 		auto *outer = new QVBoxLayout(this);
 		outer->setContentsMargins(0, 0, 0, 0);
 		auto *scroll = new QScrollArea(this);
@@ -196,6 +198,8 @@ public:
 		lay->addLayout(list);
 		lay->addStretch(1);
 	}
+
+	QSize sizeHint() const override { return QSize(320, 640); }
 
 	void refresh()
 	{

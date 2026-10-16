@@ -36,7 +36,6 @@ static void startAll()
 		return;
 	g_started = true;
 	front::stateInit();
-	front::dockCreate();
 	front::slidesStart();
 	if (!front::serverStart())
 		obs_log(LOG_WARNING, "the phone remote couldn't start on port %d", front::kPort);
@@ -93,6 +92,13 @@ static void onFrontendEvent(enum obs_frontend_event event, void *)
 	default:
 		break;
 	}
+}
+
+// The panel is added here, before OBS puts its docks back where they were last time. Added any later (after
+// OBS finishes loading), OBS has already restored its layout, and the panel comes back shrunk or out of place.
+void obs_module_post_load(void)
+{
+	front::dockCreate();
 }
 
 bool obs_module_load(void)
