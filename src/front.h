@@ -92,6 +92,10 @@ std::string slidesJson();
 std::vector<unsigned char> slideImage(const std::string &which);
 // Called from the UI thread every second: grabs the projector screen when PowerPoint isn't giving slides
 void slidesTick();
+// Grabs the projector screen now (UI thread), e.g. straight after Next or Back
+void slidesCapture(bool force);
+// "PowerPoint", "screen" or ""
+std::string slidesApp();
 
 /* ---- dock.cpp ---- */
 void dockCreate();

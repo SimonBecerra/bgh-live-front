@@ -40,6 +40,7 @@ typedef int SOCKET;
 #include <algorithm>
 #include <atomic>
 #include <cctype>
+#include <chrono>
 #include <cstdlib>
 #include <condition_variable>
 #include <cstring>
@@ -302,7 +303,18 @@ void handleCommand(SOCKET s, const Request &r, const std::string &phone)
 	} else if (cmd == "slide") {
 		const int delta = (int)obs_data_get_int(args, "d");
 		err = slidesStep(delta >= 0 ? 1 : -1);
-		runOnUi([]() { refreshState(); }, 1500);
+		if (err.empty() && slidesApp() != "PowerPoint") {
+			// A browser slideshow: give it a moment to draw the new slide, grab the projector, and send it.
+			// Once more a little later, for slideshows with a transition.
+			std::this_thread::sleep_for(std::chrono::milliseconds(150));
+			runOnUi([]() { slidesCapture(true); refreshState(); }, 1500);
+			std::thread([]() {
+				std::this_thread::sleep_for(std::chrono::milliseconds(500));
+				runOnUi([]() { slidesCapture(true); refreshState(); }, 1500);
+			}).detach();
+		} else {
+			runOnUi([]() { refreshState(); }, 1500); // PowerPoint's new slide is already in
+		}
 	} else {
 		err = "That isn't something the remote can do.";
 	}

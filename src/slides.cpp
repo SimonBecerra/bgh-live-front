@@ -446,17 +446,27 @@ void worker()
 			break;
 		}
 		Show s = readShow();
+		std::vector<std::pair<std::shared_ptr<std::promise<std::string>>, std::string>> results;
 		for (auto &c : cmds) {
 			std::string err;
 			if (s.ok) {
 				if (FAILED(dispCall(s.view, c.delta > 0 ? L"Next" : L"Previous", DISPATCH_METHOD, nullptr, 0,
-						  nullptr)))
+						    nullptr)))
 					err = "PowerPoint didn't change the slide.";
 			} else {
 				err = sendArrow(c.delta);
 			}
-			c.done->set_value(err);
+			results.push_back({c.done, err});
 		}
+		// The phone is answered once the new slide's picture is ready, so it shows it straight away
+		bool answered = false;
+		auto answer = [&]() {
+			if (answered)
+				return;
+			answered = true;
+			for (auto &r : results)
+				r.first->set_value(r.second);
+		};
 		if (!cmds.empty() && s.ok) {
 			s.release();
 			s = readShow();
@@ -465,13 +475,23 @@ void worker()
 			const long n = std::max(1L, std::min(s.n, s.total));
 			if (n != lastN || s.total != lastTotal || s.file != lastFile) {
 				auto cur = exportSlide(s.slides, n, s.w, s.h, L"bgh-live-front-cur.png");
+				{
+					std::lock_guard<std::mutex> lock(g_m);
+					g_cur.swap(cur);
+					g_next.clear();
+					g_app = "PowerPoint";
+					g_n = s.n > s.total ? s.total : s.n;
+					g_total = s.total;
+					g_ratio = ratioFor(s.w, s.h);
+					g_version++;
+				}
+				answer();
 				auto nxt = n < s.total ? exportSlide(s.slides, n + 1, s.w, s.h, L"bgh-live-front-next.png")
 						       : std::vector<unsigned char>();
 				lastN = n;
 				lastTotal = s.total;
 				lastFile = s.file;
 				std::lock_guard<std::mutex> lock(g_m);
-				g_cur.swap(cur);
 				g_next.swap(nxt);
 				g_version++;
 			}
@@ -491,6 +511,7 @@ void worker()
 				g_version++;
 			}
 		}
+		answer();
 		s.release();
 	}
 	rel(g_ppt);
@@ -570,7 +591,20 @@ std::vector<unsigned char> slideImage(const std::string &which)
 
 // UI thread, once a second. When PowerPoint isn't running the show and a Presenter phone is watching,
 // grab the projector screen so the phone shows what the audience sees.
+std::string slidesApp()
+{
+	std::lock_guard<std::mutex> lock(g_m);
+	return g_app;
+}
+
 void slidesTick()
+{
+	slidesCapture(false);
+}
+
+// Grabs the projector screen (UI thread). force: straight after Next or Back, even if no Presenter phone is
+// counted yet, so the phone sees the new slide at once instead of on the next once-a-second check.
+void slidesCapture(bool force)
 {
 	{
 		std::lock_guard<std::mutex> lock(g_m);
@@ -589,7 +623,7 @@ void slidesTick()
 		}
 		return;
 	}
-	if (presenterViewers() == 0) {
+	if (!force && presenterViewers() == 0) {
 		std::lock_guard<std::mutex> lock(g_m);
 		g_app = "screen";
 		return;

@@ -248,6 +248,13 @@ html,body{margin:0}
 :root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);box-sizing:border-box;height:100%}
 .pv-slide img{display:block;width:100%;height:100%;object-fit:contain;background:#000}
 .next-up .thumb img{display:block;width:100%;height:100%;object-fit:contain}
+/* Next or Back pressed: the outline dims until the new slide's picture arrives, then flashes yellow */
+.pv-slide{transition:border-color .15s}
+.pv-slide.waiting{border-color:var(--line-2)}
+.pv-slide.waiting img{opacity:.6;transition:opacity .15s}
+.pv-slide.fresh{animation:slideFresh .7s ease-out}
+@keyframes slideFresh{0%{box-shadow:0 0 0 0 rgba(245,183,0,.95)}100%{box-shadow:0 0 0 16px rgba(245,183,0,0)}}
+@media (prefers-reduced-motion:reduce){.pv-slide.fresh{animation:none}}
 .pv-empty{position:absolute;inset:0;display:grid;place-items:center;padding:12%;box-sizing:border-box;text-align:center;color:var(--muted);font-size:15px;line-height:1.45}
 .sc:disabled{opacity:.45}
 </style>
@@ -288,7 +295,8 @@ const ls = {get(k){ try{ return localStorage.getItem(k); }catch(e){ return null;
 const S = {
   token:ls.get("bghFrontToken") || "", mode:ls.get("bghFrontMode"), turn:ls.get("bghFrontTurn") === "1",
   st:null, connected:false, offset:0, note:"", sheet:null, armed:null, armT:null, trOpen:false,
-  nudgeUntil:0, nudgeT:null, pjBounce:false, toastT:null, x0:null, busy:false
+  nudgeUntil:0, nudgeT:null, pjBounce:false, toastT:null, x0:null, busy:false,
+  shownSrc:"", loadingSrc:"", waiting:false, waitT:null, freshUntil:0
 };
 if(!["presenter", "controller"].includes(S.mode)) S.mode = null;
 const now = () => Date.now() + S.offset;   // the laptop's clock
@@ -360,6 +368,29 @@ function render(){
   P.innerHTML = headerHTML() + (S.mode === "presenter" ? presenterHTML() : controllerHTML())
     + (S.sheet ? S.sheet() : "") + `<div class="toast" id="toast" role="status" hidden></div>`;
   wire();
+  if(S.mode === "presenter") preloadSlide();
+}
+
+// Loads the new slide's picture in the background, then swaps it in and flashes the outline
+function preloadSlide(){
+  const g = (S.st && S.st.slides) || {};
+  if(!g.img) return;
+  const want = `/api/img?t=${encodeURIComponent(S.token)}&k=cur&v=${g.v || 0}`;
+  if(want === S.shownSrc || want === S.loadingSrc) return;
+  S.loadingSrc = want;
+  const im = new Image();
+  im.onload = () => {
+    if(S.loadingSrc !== want) return;
+    S.loadingSrc = ""; S.shownSrc = want;
+    clearTimeout(S.waitT);
+    const wasWaiting = S.waiting; S.waiting = false;
+    if(wasWaiting) S.freshUntil = Date.now() + 700;
+    const pv = $("pvSlide"), el = pv && pv.querySelector("img");
+    if(el){ el.src = want; pv.classList.remove("waiting"); if(wasWaiting){ pv.classList.remove("fresh"); void pv.offsetWidth; pv.classList.add("fresh"); } }
+    else render();
+  };
+  im.onerror = () => { if(S.loadingSrc === want) S.loadingSrc = ""; };
+  im.src = want;
 }
 
 /* Presenter: what's on the projector, what's next, and two big buttons */
@@ -367,14 +398,19 @@ function presenterHTML(){
   const st = S.st || {}, g = st.slides || {}, pp = g.app === "PowerPoint";
   const ar = g.ratio === "16:9" ? 16 / 9 : 4 / 3, wide = g.ratio === "16:9";
   const img = k => `/api/img?t=${encodeURIComponent(S.token)}&k=${k}&v=${g.v || 0}`;
+  const want = g.img ? img("cur") : "";
+  if(!want) S.shownSrc = "";
+  else if(!S.shownSrc) S.shownSrc = want;   // the first picture: show it as it loads
+  const shown = S.shownSrc || want;
+  const cls = (S.waiting ? " waiting" : "") + (S.freshUntil > Date.now() ? " fresh" : "");
   const tag = st.proj ? (pp ? "HIDDEN BEHIND OBS" : "OBS ON PROJECTOR") : "ON PROJECTOR";
   const empty = !st.pjFound ? `The ${esc(st.pjName || "OPTOMA")} projector isn't connected to the laptop.` : "Nothing is showing on the projector yet.";
   const atEnd = pp && g.total && g.n >= g.total, atStart = pp && g.n <= 1;
   const nextUp = !pp ? "" : `<div class="next-up">${g.next ? `<div class="thumb"><img src="${img("next")}" alt=""></div><div class="nt"><span>Up next</span><b>Slide ${g.n + 1}</b></div>`
     : `<div class="thumb"></div><div class="nt"><span>Up next</span><b>End of slideshow</b></div>`}</div>`;
   return `<div class="pres ctl" style="--ar:${ar}">
-    <div class="pv-box"><div class="pv-slide${wide ? " wide" : ""}" id="pvSlide" role="img" aria-label="${pp ? `Slide ${g.n} of ${g.total}` : "The projector"}">
-      ${g.img ? `<img src="${img("cur")}" alt="">` : `<div class="pv-empty">${empty}</div>`}<span class="tag">${tag}</span></div></div>
+    <div class="pv-box"><div class="pv-slide${wide ? " wide" : ""}${cls}" id="pvSlide" role="img" aria-label="${pp ? `Slide ${g.n} of ${g.total}` : "The projector"}">
+      ${g.img ? `<img src="${shown}" alt="">` : `<div class="pv-empty">${empty}</div>`}<span class="tag">${tag}</span></div></div>
     ${nextUp}
     <div class="pres-nav">
       <button class="btn" id="slBack" type="button" aria-label="Previous slide" ${atStart ? "disabled" : ""}>${ic("back")}</button>
@@ -415,7 +451,14 @@ function wire(){
   if($("connBtn")) $("connBtn").onclick = () => toast("Connected to Device");
   if($("turn")) $("turn").onclick = () => { S.turn = !S.turn; ls.set("bghFrontTurn", S.turn ? "1" : null); render(); };
   if(S.mode === "presenter"){
-    const step = async d => { const r = await cmd("slide", {d}); return r; };
+    const step = async d => {
+      S.waiting = true; clearTimeout(S.waitT);
+      const pv = $("pvSlide"); if(pv) pv.classList.add("waiting");
+      S.waitT = setTimeout(() => { S.waiting = false; const p = $("pvSlide"); if(p) p.classList.remove("waiting"); }, 2500);
+      const r = await cmd("slide", {d});
+      if(!r.ok){ clearTimeout(S.waitT); S.waiting = false; render(); }
+      return r;
+    };
     $("slBack").onclick = () => step(-1);
     $("slNext").onclick = () => step(1);
     // Tap the slide's right side for next, the left side for back; or swipe
