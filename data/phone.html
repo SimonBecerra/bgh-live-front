@@ -115,8 +115,12 @@ svg.i{width:20px;height:20px;flex:none;stroke:currentColor;fill:none;stroke-widt
 
 /* Projector + Record row */
 .acts{flex:none;display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.act.endshow .t svg.i{color:var(--muted)}
-.act.endshow:active:not(:disabled){transform:scale(.98)}
+.act.swap-btn{flex-direction:row;align-items:center;justify-content:center;gap:10px;color:var(--muted)}
+.act.swap-btn span{display:grid;place-items:center;width:40px;height:40px;border-radius:10px;border:1.5px solid var(--line-2)}
+.act.swap-btn span svg.i{width:22px;height:22px}
+.act.swap-btn span.front{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+.act.swap-btn > svg.i{width:20px;height:20px}
+.act.swap-btn:active:not(:disabled){transform:scale(.98)}
 .gear.pj-btn[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .gear.pj-btn.bounce{animation:pjBounce .6s cubic-bezier(.3,1.6,.5,1)}
 @keyframes pjBounce{0%{transform:scale(1)}30%{transform:scale(1.25)}55%{transform:scale(.92)}75%{transform:scale(1.06)}100%{transform:scale(1)}}
@@ -456,9 +460,8 @@ function controllerHTML(){
       <span class="t"><i class="rdot"></i>${st.rec ? `<span class="tn" id="recT">${fmt(now() - st.recT0)}</span>` : "Record"}</span>
       <small>${st.rec ? "Recording · tap to stop" : "Not recording"}</small>
     </button>
-    <button class="act endshow" id="endShow" type="button" ${st.pjFound ? "" : "disabled"}>
-      <span class="t">${ic("stopshow")}Stop presenting</span>
-      <small>Closes the slideshow</small>
+    <button class="act swap-btn" id="swapBtn" type="button" ${st.pjFound ? "" : "disabled"} aria-label="Swap presentation and projection. ${st.presFront ? "The presentation is in front" : "The projection is in front"}">
+      <span class="${st.presFront ? "front" : ""}">${ic("proj")}</span>${ic("swap")}<span class="${st.presFront ? "" : "front"}">${ic("cast")}</span>
     </button>
   </div>`;
 }
@@ -499,8 +502,12 @@ function wire(){
       if(r.ok && S.st && !S.st.proj){ S.nudgeUntil = Date.now() + 10000; render(); clearTimeout(S.nudgeT); S.nudgeT = setTimeout(render, 10050); }
     });
     $("trBtn").onclick = () => { S.trOpen = !S.trOpen; render(); };
-    $("pjBtn").onclick = () => { S.sheet = pjMenuHTML; render(); };
-    $("endShow").onclick = () => { S.sheet = endShowHTML; render(); };
+    $("pjBtn").onclick = async () => {
+      if(S.st && S.st.proj){ S.sheet = pjStopHTML; render(); return; }
+      const r = await cmd("proj", {on:true});
+      if(r.ok){ S.nudgeUntil = 0; S.pjBounce = true; render(); S.pjBounce = false; toast(`Projecting on the ${(S.st && S.st.pjName) || "OPTOMA"} projector.`); }
+    };
+    $("swapBtn").onclick = () => { S.sheet = swapHTML; render(); };
     $("rec").onclick = async () => {
       if(S.st && S.st.rec){ S.sheet = stopHTML; render(); return; }
       const r = await cmd("rec", {on:true});
@@ -509,7 +516,6 @@ function wire(){
   }
   if(S.sheet === stopHTML) wireStop();
   if(S.sheet === pjStopHTML) wirePjStop();
-  if(S.sheet === pjMenuHTML) wirePjMenu();
   if(S.sheet === swapHTML) wireSwap();
   if(S.sheet === endShowHTML) wireEndShow();
 }
@@ -527,29 +533,7 @@ function wireEndShow(){
   $("scrim").onclick = e => { if(e.target.id === "scrim") close(); };
   $("esYes").onclick = async () => { S.sheet = null; render(); const r = await cmd("endshow"); if(r.ok) toast("Stopped presenting."); };
 }
-/* The cast button: project (or stop), or swap which is in front on the projector */
-function pjMenuHTML(){
-  const st = S.st || {}, name = esc(st.pjName || "OPTOMA");
-  return `<div class="scrim center" id="scrim"><div class="sheet pj-menu" role="dialog" aria-modal="true" aria-labelledby="pmH">
-    <h3 id="pmH">Projector</h3>
-    ${st.proj ? `<button class="btn" id="pmStop" type="button">${ic("cast")}Stop projecting</button>`
-      : `<button class="btn primary" id="pmProj" type="button" ${st.pjFound ? "" : "disabled"}>${ic("cast")}Project on ${name}</button>`}
-    <button class="btn" id="pmSwap" type="button" ${st.pjFound ? "" : "disabled"}>${ic("swap")}Swap presentation and projection</button>
-    <button class="btn quiet" id="pmNo" type="button">Cancel</button>
-  </div></div>`;
-}
-function wirePjMenu(){
-  const close = () => { S.sheet = null; render(); };
-  $("pmNo").onclick = close;
-  $("scrim").onclick = e => { if(e.target.id === "scrim") close(); };
-  if($("pmStop")) $("pmStop").onclick = () => { S.sheet = pjStopHTML; render(); };
-  if($("pmProj")) $("pmProj").onclick = async () => {
-    S.sheet = null; render();
-    const r = await cmd("proj", {on:true});
-    if(r.ok){ S.nudgeUntil = 0; S.pjBounce = true; render(); S.pjBounce = false; toast(`Projecting on the ${(S.st && S.st.pjName) || "OPTOMA"} projector.`); }
-  };
-  $("pmSwap").onclick = () => { S.sheet = swapHTML; render(); };
-}
+/* Swap which is in front on the projector: the presentation or OBS's projection */
 function swapHTML(){
   const st = S.st || {}, presFront = !!st.presFront;
   return `<div class="scrim center" id="scrim"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="swH">
