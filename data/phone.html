@@ -121,6 +121,9 @@ svg.i{width:20px;height:20px;flex:none;stroke:currentColor;fill:none;stroke-widt
 .act.swap-btn span.front{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
 .act.swap-btn > svg.i{width:20px;height:20px}
 .act.swap-btn:active:not(:disabled){transform:scale(.98)}
+.act.swap-btn.armed{border-color:var(--accent);background:var(--accent-soft);color:var(--accent);animation:swapArm .9s ease-in-out infinite}
+@keyframes swapArm{50%{box-shadow:0 0 0 4px rgba(245,183,0,.35)}}
+@media (prefers-reduced-motion:reduce){.act.swap-btn.armed{animation:none}}
 .gear.pj-btn[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .gear.pj-btn.bounce{animation:pjBounce .6s cubic-bezier(.3,1.6,.5,1)}
 @keyframes pjBounce{0%{transform:scale(1)}30%{transform:scale(1.25)}55%{transform:scale(.92)}75%{transform:scale(1.06)}100%{transform:scale(1)}}
@@ -460,7 +463,7 @@ function controllerHTML(){
       <span class="t"><i class="rdot"></i>${st.rec ? `<span class="tn" id="recT">${fmt(now() - st.recT0)}</span>` : "Record"}</span>
       <small>${st.rec ? "Recording · tap to stop" : "Not recording"}</small>
     </button>
-    <button class="act swap-btn" id="swapBtn" type="button" ${st.pjFound ? "" : "disabled"} aria-label="Swap presentation and projection. ${st.presFront ? "The presentation is in front" : "The projection is in front"}">
+    <button class="act swap-btn${S.swapArmed ? " armed" : ""}" id="swapBtn" type="button" ${st.pjFound ? "" : "disabled"} aria-label="${S.swapArmed ? "Tap again to swap" : "Swap presentation and projection. " + (st.presFront ? "The presentation is in front" : "The projection is in front")}">
       <span class="${st.presFront ? "front" : ""}">${ic("proj")}</span>${ic("swap")}<span class="${st.presFront ? "" : "front"}">${ic("cast")}</span>
     </button>
   </div>`;
@@ -507,7 +510,16 @@ function wire(){
       const r = await cmd("proj", {on:true});
       if(r.ok){ S.nudgeUntil = 0; S.pjBounce = true; render(); S.pjBounce = false; toast(`Projecting on the ${(S.st && S.st.pjName) || "OPTOMA"} projector.`); }
     };
-    $("swapBtn").onclick = () => { S.sheet = swapHTML; render(); };
+    // Double tap to swap: the first tap arms it for 3 seconds, the second swaps
+    $("swapBtn").onclick = async () => {
+      clearTimeout(S.swapT);
+      if(!S.swapArmed){ S.swapArmed = true; render(); S.swapT = setTimeout(() => { S.swapArmed = false; render(); }, 3000); return; }
+      S.swapArmed = false;
+      const st = S.st || {}, toPres = !st.presFront, starting = !toPres && !st.proj;
+      render();
+      const r = await cmd("swap");
+      if(r.ok) toast(toPres ? "The presentation is in front." : starting ? "Projecting the Black scene, in front of the presentation." : "OBS's projection is in front.");
+    };
     $("rec").onclick = async () => {
       if(S.st && S.st.rec){ S.sheet = stopHTML; render(); return; }
       const r = await cmd("rec", {on:true});

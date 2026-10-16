@@ -325,7 +325,13 @@ std::string setProjecting(bool on)
 	obs_frontend_open_projector("Program", index, "", "");
 	// Straight away, so a presentation chosen to stay in front covers the new projector without a flash
 	applyOnTop();
-	QTimer::singleShot(150, []() { applyOnTop(); });
+	// OBS opens the projector window a moment later: keep putting it in its place (and telling phones) while it
+	// appears, so it ends up above a presentation (PowerPoint keeps itself on top) without waiting a second
+	for (int ms : {150, 400, 800, 1500})
+		QTimer::singleShot(ms, []() {
+			applyOnTop();
+			refreshState();
+		});
 	return "";
 }
 
