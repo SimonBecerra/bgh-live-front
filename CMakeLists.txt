@@ -25,7 +25,7 @@ set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES AUTOMOC ON AUTOUIC ON AUT
 
 if(WIN32)
   # Sockets for the phone remote, COM for PowerPoint, user32 for sending keys to a slideshow
-  target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE ws2_32 iphlpapi ole32 oleaut32 uuid user32)
+  target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE ws2_32 iphlpapi ole32 oleaut32 uuid user32 dwmapi)
   target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX _WINSOCK_DEPRECATED_NO_WARNINGS)
 endif()
 

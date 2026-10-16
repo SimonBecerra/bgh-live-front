@@ -36,6 +36,7 @@ the Free Software Foundation; either version 2 of the License, or
 
 #ifdef _WIN32
 #include <windows.h>
+#include <dwmapi.h>
 #include <objbase.h>
 #include <ole2.h>
 #include <oleauto.h>
@@ -158,10 +159,34 @@ struct WinFind {
 	bool coveredByObs = false; // an OBS window (the projector) is on top of it
 };
 
+std::wstring className(HWND w)
+{
+	wchar_t c[128] = {};
+	GetClassNameW(w, c, 127);
+	return c;
+}
+
+// Windows that are "visible" but aren't anything a person sees: overlays (NVIDIA, Discord, Xbox Game Bar),
+// suspended Windows apps, the desktop and taskbar, tooltips
+bool invisibleKind(HWND w)
+{
+	const LONG_PTR ex = GetWindowLongPtrW(w, GWL_EXSTYLE);
+	if (ex & (WS_EX_TRANSPARENT | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE))
+		return true;
+	BOOL cloaked = FALSE;
+	if (SUCCEEDED(DwmGetWindowAttribute(w, DWMWA_CLOAKED, &cloaked, sizeof(cloaked))) && cloaked)
+		return true;
+	if (GetWindow(w, GW_OWNER) && !(ex & WS_EX_APPWINDOW))
+		return true; // owned pop-ups (menus, tooltips)
+	const std::wstring c = className(w);
+	return c == L"Progman" || c == L"WorkerW" || c == L"Shell_TrayWnd" || c == L"Shell_SecondaryTrayWnd" ||
+	       c == L"CEF-OSC-WIDGET" || c == L"Windows.UI.Core.CoreWindow" || c == L"ApplicationFrameWindow" && cloaked;
+}
+
 BOOL CALLBACK winEnum(HWND w, LPARAM p)
 {
 	auto *f = (WinFind *)p;
-	if (!IsWindowVisible(w) || IsIconic(w))
+	if (!IsWindowVisible(w) || IsIconic(w) || invisibleKind(w))
 		return TRUE;
 	if (MonitorFromWindow(w, MONITOR_DEFAULTTONULL) != f->mon)
 		return TRUE;
@@ -185,45 +210,89 @@ BOOL CALLBACK winEnum(HWND w, LPARAM p)
 	return FALSE;
 }
 
-void sendKeyTo(HWND target, WORD vk, bool background)
+BOOL CALLBACK findRender(HWND w, LPARAM p)
 {
-	if (background) {
-		// Without bringing it to the front (an OBS projector stays on top): post the key to the window
-		HWND to = FindWindowExW(target, nullptr, L"Chrome_RenderWidgetHostHWND", nullptr);
-		if (!to) {
-			HWND child = FindWindowExW(target, nullptr, L"Chrome_WidgetWin_0", nullptr);
-			if (child)
-				to = FindWindowExW(child, nullptr, L"Chrome_RenderWidgetHostHWND", nullptr);
-		}
-		if (!to)
-			to = target;
-		const UINT scan = MapVirtualKeyW(vk, MAPVK_VK_TO_VSC);
-		const LPARAM down = (LPARAM)1 | ((LPARAM)scan << 16) | ((LPARAM)1 << 24);
-		const LPARAM up = down | ((LPARAM)1 << 30) | ((LPARAM)1 << 31);
-		PostMessageW(to, WM_KEYDOWN, vk, down);
-		PostMessageW(to, WM_KEYUP, vk, up);
-		return;
+	if (className(w) == L"Chrome_RenderWidgetHostHWND" && IsWindowVisible(w)) {
+		*(HWND *)p = w;
+		return FALSE;
 	}
-	// Bring the slideshow window to the front for a moment, press the key, then give the focus back
-	HWND before = GetForegroundWindow();
+	return TRUE;
+}
+
+// Brings a window to the front. Windows only lets the program the person last used do that, so first try
+// the usual way, then once more after a do-nothing mouse nudge from this program (which counts as "last used").
+bool bringToFront(HWND target)
+{
+	if (GetForegroundWindow() == target)
+		return true;
 	const DWORD me = GetCurrentThreadId();
-	const DWORD fg = before ? GetWindowThreadProcessId(before, nullptr) : 0;
-	if (fg && fg != me)
-		AttachThreadInput(me, fg, TRUE);
-	SetForegroundWindow(target);
-	if (fg && fg != me)
-		AttachThreadInput(me, fg, FALSE);
-	Sleep(40);
+	for (int attempt = 0; attempt < 2; attempt++) {
+		if (attempt == 1) {
+			INPUT nudge = {};
+			nudge.type = INPUT_MOUSE;
+			nudge.mi.dwFlags = MOUSEEVENTF_MOVE; // moves 0 pixels
+			SendInput(1, &nudge, sizeof(INPUT));
+		}
+		HWND fg = GetForegroundWindow();
+		const DWORD fgT = fg ? GetWindowThreadProcessId(fg, nullptr) : 0;
+		const DWORD tgT = GetWindowThreadProcessId(target, nullptr);
+		if (fgT && fgT != me)
+			AttachThreadInput(me, fgT, TRUE);
+		if (tgT && tgT != me && tgT != fgT)
+			AttachThreadInput(me, tgT, TRUE);
+		BringWindowToTop(target);
+		SetForegroundWindow(target);
+		if (tgT && tgT != me && tgT != fgT)
+			AttachThreadInput(me, tgT, FALSE);
+		if (fgT && fgT != me)
+			AttachThreadInput(me, fgT, FALSE);
+		for (int i = 0; i < 10 && GetForegroundWindow() != target; i++)
+			Sleep(10);
+		if (GetForegroundWindow() == target)
+			return true;
+	}
+	return false;
+}
+
+HWND g_lastTarget = nullptr;
+
+void postKey(HWND target, WORD vk)
+{
+	HWND to = nullptr;
+	EnumChildWindows(target, findRender, (LPARAM)&to); // Chrome and Edge take keys in this inner window
+	if (!to)
+		to = target;
+	const UINT scan = MapVirtualKeyW(vk, MAPVK_VK_TO_VSC);
+	const LPARAM down = (LPARAM)1 | ((LPARAM)scan << 16) | ((LPARAM)1 << 24);
+	const LPARAM up = down | ((LPARAM)1 << 30) | ((LPARAM)1 << 31);
+	PostMessageW(to, WM_KEYDOWN, vk, down);
+	PostMessageW(to, WM_KEYUP, vk, up);
+}
+
+// Presses a key in the slideshow window. Returns false if it could only be posted in the background.
+bool sendKeyTo(HWND target, WORD vk)
+{
+	HWND before = GetForegroundWindow();
+	DWORD beforePid = 0;
+	if (before)
+		GetWindowThreadProcessId(before, &beforePid);
+	if (!bringToFront(target)) {
+		postKey(target, vk);
+		return false;
+	}
 	INPUT in[2] = {};
 	in[0].type = INPUT_KEYBOARD;
 	in[0].ki.wVk = vk;
+	in[0].ki.wScan = (WORD)MapVirtualKeyW(vk, MAPVK_VK_TO_VSC);
 	in[0].ki.dwFlags = KEYEVENTF_EXTENDEDKEY;
 	in[1] = in[0];
 	in[1].ki.dwFlags = KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP;
 	SendInput(2, in, sizeof(INPUT));
-	Sleep(40);
-	if (before && before != target)
-		SetForegroundWindow(before);
+	Sleep(120); // let the browser read the key before the focus goes back
+	// Give the focus back to OBS if it had it, so whoever is at the laptop carries on where they were
+	if (before && before != target && beforePid == GetCurrentProcessId())
+		bringToFront(before);
+	return true;
 }
 
 // delta: +1 Right, -1 Left, 0 Escape (ends the slideshow, or leaves full screen in a browser)
@@ -238,8 +307,19 @@ std::string sendArrow(int delta)
 	WinFind f{mon, mi.rcMonitor, GetCurrentProcessId()};
 	EnumWindows(winEnum, (LPARAM)&f);
 	if (!f.found)
-		return "There's no slideshow showing on the projector.";
-	sendKeyTo(f.found, delta > 0 ? VK_RIGHT : delta < 0 ? VK_LEFT : VK_ESCAPE, f.coveredByObs && delta != 0);
+		return "There's no slideshow showing on the projector. Put the presentation full screen on the projector.";
+	if (f.found != g_lastTarget) {
+		// The log says which window the arrow keys go to, in case it's the wrong one
+		g_lastTarget = f.found;
+		wchar_t title[256] = {};
+		GetWindowTextW(f.found, title, 255);
+		char t[512] = {}, c[256] = {};
+		WideCharToMultiByte(CP_UTF8, 0, title, -1, t, sizeof(t) - 1, nullptr, nullptr);
+		WideCharToMultiByte(CP_UTF8, 0, className(f.found).c_str(), -1, c, sizeof(c) - 1, nullptr, nullptr);
+		obs_log(LOG_INFO, "slideshow window on the projector: \"%s\" (%s)", t, c);
+	}
+	if (!sendKeyTo(f.found, delta > 0 ? VK_RIGHT : delta < 0 ? VK_LEFT : VK_ESCAPE))
+		obs_log(LOG_INFO, "Windows didn't let the slideshow come to the front, so the key was sent in the background");
 	return "";
 }
 
