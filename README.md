@@ -42,6 +42,10 @@ The code changes after each phone pairs, and five wrong codes pause pairing for 
   **Projector screen** list: **Any screen named OPTOMA** (the default) or a particular screen. It's remembered by
   the screen's name, so Windows numbering screens differently after a restart doesn't move it. The panel shows
   whether that screen is connected.
+- **What's in front on the projector.** The panel's **On top** setting: **Automatic** (the default) keeps
+  PowerPoint's slide show and any full-screen presentation (Keynote or Google Slides presenting in a browser) on
+  top, OBS's projector second, and everything else, such as an ordinary browser window, underneath.
+  **OBS Projector** covers everything; **Presentation** keeps whatever is on the projector in front of OBS.
 - **Scenes.** Only the five scenes above appear on the phone; other scenes in OBS are ignored. Each needs two taps.
   They're listed in `allowedScenes()` in `src/state.cpp`.
 - **Network.** The installer allows TCP port 8650 through Windows Firewall. Only phones on the same network can reach it.

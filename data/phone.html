@@ -408,7 +408,7 @@ function presenterHTML(){
   else if(!S.shownSrc) S.shownSrc = want;   // the first picture: show it as it loads
   const shown = S.shownSrc || want;
   const cls = (S.waiting ? " waiting" : "") + (S.freshUntil > Date.now() ? " fresh" : "");
-  const tag = st.proj && st.onTop !== "presentation" ? (pp ? "HIDDEN BEHIND OBS" : "OBS ON PROJECTOR") : "ON PROJECTOR";
+  const tag = st.proj && !st.presFront ? (pp ? "HIDDEN BEHIND OBS" : "OBS ON PROJECTOR") : "ON PROJECTOR";
   const empty = !st.pjFound ? `The ${esc(st.pjName || "OPTOMA")} projector isn't connected to the laptop.` : "Nothing is showing on the projector yet.";
   const atEnd = pp && g.total && g.n >= g.total, atStart = pp && g.n <= 1;
   const nextUp = !pp ? "" : `<div class="next-up">${g.next ? `<div class="thumb"><img src="${img("next")}" alt=""></div><div class="nt"><span>Up next</span><b>Slide ${g.n + 1}</b></div>`

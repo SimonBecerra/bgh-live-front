@@ -139,7 +139,7 @@ static std::string settingsFile()
 	return out;
 }
 
-static std::string g_onTop = "obs";
+static std::string g_onTop = "auto";
 
 static void loadSettings()
 {
@@ -147,7 +147,8 @@ static void loadSettings()
 	obs_data_t *d = f.empty() ? nullptr : obs_data_create_from_json_file_safe(f.c_str(), "bak");
 	std::lock_guard<std::mutex> lock(g_cfgm);
 	g_choice = d ? obs_data_get_string(d, "projectorScreen") : "";
-	g_onTop = d && std::string(obs_data_get_string(d, "onTop")) == "presentation" ? "presentation" : "obs";
+	const std::string saved = d ? obs_data_get_string(d, "onTop") : "";
+	g_onTop = saved == "presentation" || saved == "obs" ? saved : "auto";
 	if (d)
 		obs_data_release(d);
 }
@@ -176,7 +177,7 @@ void setOnTop(const std::string &which)
 {
 	{
 		std::lock_guard<std::mutex> lock(g_cfgm);
-		g_onTop = which == "presentation" ? "presentation" : "obs";
+		g_onTop = which == "presentation" || which == "obs" ? which : "auto";
 	}
 	saveSettings();
 	obs_log(LOG_INFO, "on top of the projector: %s", which.c_str());
@@ -592,7 +593,8 @@ void refreshState()
 	std::string json = std::string("{\"obs\":true") + ",\"program\":\"" + jsonEscape(program) + "\"" +
 			   ",\"scenes\":" + scenes + ",\"rec\":" + (rec ? "true" : "false") +
 			   ",\"recT0\":" + std::to_string(g_recStart) + ",\"proj\":" + (projecting ? "true" : "false") +
-			   ",\"pjFound\":" + (pj ? "true" : "false") + ",\"onTop\":\"" + onTop() + "\"" + ",\"pjName\":\"" + jsonEscape(projectorLabel()) +
+			   ",\"pjFound\":" + (pj ? "true" : "false") + ",\"onTop\":\"" + onTop() + "\"" +
+			   ",\"presFront\":" + (presentationInFront() ? "true" : "false") + ",\"pjName\":\"" + jsonEscape(projectorLabel()) +
 			   "\"" + ",\"slides\":" + slidesJson() + "}";
 
 	bool changed = false;

@@ -703,6 +703,44 @@ std::vector<unsigned char> slideImage(const std::string &which)
 
 // UI thread, once a second. When PowerPoint isn't running the show and a Presenter phone is watching,
 // grab the projector screen so the phone shows what the audience sees.
+#ifdef _WIN32
+// A presentation, as opposed to an ordinary window: PowerPoint's slide show, or anything in true full screen
+// (Keynote or Google Slides presenting in a browser), which covers the whole screen with no title bar.
+// A maximized browser window still has its title bar, so it isn't one.
+bool isPresentation(HWND w, const RECT &mon)
+{
+	if (!w)
+		return false;
+	if (className(w) == L"screenClass")
+		return true; // PowerPoint's slide show
+	const LONG_PTR style = GetWindowLongPtrW(w, GWL_STYLE);
+	if ((style & WS_CAPTION) == WS_CAPTION)
+		return false;
+	RECT r;
+	return GetWindowRect(w, &r) && r.left <= mon.left && r.top <= mon.top && r.right >= mon.right &&
+	       r.bottom >= mon.bottom;
+}
+
+// True if a is in front of b
+bool inFront(HWND a, HWND b)
+{
+	for (HWND w = GetTopWindow(nullptr); w; w = GetWindow(w, GW_HWNDNEXT)) {
+		if (w == a)
+			return true;
+		if (w == b)
+			return false;
+	}
+	return false;
+}
+#endif
+
+std::atomic<bool> g_presInFront{false};
+
+bool presentationInFront()
+{
+	return g_presInFront;
+}
+
 void applyOnTop(bool restore)
 {
 #ifdef _WIN32
@@ -714,10 +752,12 @@ void applyOnTop(bool restore)
 		return;
 	}
 	HWND pres = nullptr;
+	RECT monRect{};
 	if (HMONITOR mon = projectorMonitor()) {
 		MONITORINFO mi{};
 		mi.cbSize = sizeof(mi);
 		GetMonitorInfoW(mon, &mi);
+		monRect = mi.rcMonitor;
 		WinFind f{mon, mi.rcMonitor, GetCurrentProcessId()};
 		EnumWindows(winEnum, (LPARAM)&f);
 		pres = f.found;
@@ -725,20 +765,32 @@ void applyOnTop(bool restore)
 	std::vector<HWND> obs;
 	for (void *h : obsProjectorHandles())
 		obs.push_back((HWND)h);
-	const bool presFront = onTop() == "presentation";
+	const std::string mode = onTop();
+	// auto:         presentations on top, OBS's projector second, everything else underneath
+	// presentation: whatever is on the projector stays in front of OBS
+	// obs:          OBS's projector covers everything
+	const bool presOnTop = !obs.empty() && pres &&
+			       (mode == "presentation" || (mode == "auto" && isPresentation(pres, monRect)));
+	const bool obsOnTop = mode != "presentation";
+	g_presInFront = presOnTop;
 	// Anything raised before that isn't wanted in front any more goes back to normal
 	for (HWND w : std::vector<HWND>(g_madeTop)) {
 		const bool isObs = std::find(obs.begin(), obs.end(), w) != obs.end();
-		const bool keep = presFront ? (w == pres) : isObs;
+		const bool keep = (isObs && obsOnTop) || (presOnTop && w == pres);
 		if (!keep)
 			makeTop(w, false);
 	}
-	if (presFront) {
-		if (pres && !obs.empty())
-			makeTop(pres, true); // only needed while an OBS projector is there to cover it
-	} else {
+	if (obsOnTop)
 		for (HWND w : obs)
 			makeTop(w, true);
+	if (presOnTop) {
+		makeTop(pres, true);
+		// Both stay above ordinary windows; the presentation goes above OBS's projector
+		for (HWND w : obs)
+			if (inFront(w, pres)) {
+				SetWindowPos(pres, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+				break;
+			}
 	}
 #else
 	(void)restore;

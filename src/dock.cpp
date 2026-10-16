@@ -161,19 +161,23 @@ public:
 		lay->addWidget(topHead);
 		auto *topRow = new QHBoxLayout();
 		topRow->setSpacing(0);
+		topAuto = new QPushButton("Automatic");
 		topObs = new QPushButton("OBS Projector");
 		topPres = new QPushButton("Presentation");
 		auto *group = new QButtonGroup(this);
 		group->setExclusive(true);
-		for (QPushButton *b : {topObs, topPres}) {
+		for (QPushButton *b : {topAuto, topObs, topPres}) {
 			b->setCheckable(true);
 			b->setMinimumHeight(34);
 			b->setCursor(Qt::PointingHandCursor);
 			group->addButton(b);
 			topRow->addWidget(b, 1);
 		}
-		topObs->setStyleSheet(segStyle("6px 0 0 6px"));
+		topAuto->setStyleSheet(segStyle("6px 0 0 6px"));
+		topObs->setStyleSheet(segStyle("0"));
 		topPres->setStyleSheet(segStyle("0 6px 6px 0"));
+		topAuto->setToolTip("PowerPoint and full-screen presentations on top, OBS's projector second, everything else underneath");
+		QObject::connect(topAuto, &QPushButton::clicked, [this]() { chooseTop("auto"); });
 		topObs->setToolTip("OBS's projector covers the slideshow while it's open");
 		topPres->setToolTip("The slideshow stays in front; OBS's projector waits behind it");
 		QObject::connect(topObs, &QPushButton::clicked, [this]() { chooseTop("obs"); });
@@ -258,17 +262,23 @@ public:
 		}
 
 		const bool on = isProjecting();
-		const bool presFront = onTop() == "presentation";
+		const std::string mode = onTop();
+		const bool presFront = mode == "presentation";
 		projBtn->setEnabled(on || pj != nullptr);
 		projBtn->setText(on ? QString("Projecting on %1%2 · Stop")
 					      .arg(QString::fromStdString(projectorLabel()))
 					      .arg(presFront ? " (behind the presentation)" : "")
 				    : QString("Project on %1").arg(QString::fromStdString(projectorLabel())));
-		topObs->setChecked(!presFront);
+		topAuto->setChecked(mode == "auto");
+		topObs->setChecked(mode == "obs");
 		topPres->setChecked(presFront);
-		topNote->setText(presFront ? "The slideshow stays in front. OBS's projector waits behind it and shows when the "
-					     "slideshow is closed."
-					   : "OBS's projector covers the slideshow while it's open. Close it to show the slideshow.");
+		topNote->setText(mode == "auto"
+					 ? "PowerPoint and full-screen presentations stay on top. OBS's projector comes second and covers "
+					   "everything else, such as an ordinary browser window."
+				 : presFront ? "The slideshow stays in front. OBS's projector waits behind it and shows when the "
+					       "slideshow is closed."
+					     : "OBS's projector covers everything while it's open, presentations too. Close it to "
+					       "show the slideshow.");
 		projBtn->setStyleSheet(on ? "QPushButton{background:#F5B700;color:#132932;font-weight:bold;border-radius:6px;}"
 					  : "QPushButton{font-weight:bold;}");
 
@@ -317,7 +327,7 @@ private:
 	QVBoxLayout *lay = nullptr, *list = nullptr;
 	QLabel *qr = nullptr, *url = nullptr, *code = nullptr, *projector = nullptr;
 	QComboBox *screenBox = nullptr;
-	QPushButton *projBtn = nullptr, *topObs = nullptr, *topPres = nullptr;
+	QPushButton *projBtn = nullptr, *topAuto = nullptr, *topObs = nullptr, *topPres = nullptr;
 	QLabel *topNote = nullptr;
 
 	static QString segStyle(const char *radius)

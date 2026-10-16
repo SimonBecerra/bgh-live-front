@@ -31,7 +31,8 @@ std::string projectorChoice();
 void setProjectorChoice(const std::string &name);
 // How to name the projector to people: the chosen screen's name, or "OPTOMA"
 std::string projectorLabel();
-// What stays in front on the projector when both are there: "obs" (OBS's projector) or "presentation"
+// What stays in front on the projector: "auto" (presentations, then OBS's projector, then everything else),
+// "obs" (OBS's projector covers everything) or "presentation" (whatever is on the projector stays in front)
 std::string onTop();
 void setOnTop(const std::string &which);
 // The only OBS scenes the phone shows, in this order. Any other scenes in OBS are ignored.
@@ -104,6 +105,8 @@ std::string slidesApp();
 // UI thread: keeps OBS's projector or the presentation in front on the projector, as chosen in the dock.
 // restore: give back the normal window order (when OBS closes).
 void applyOnTop(bool restore = false);
+// True while the presentation is in front of OBS's projector on the projector screen
+bool presentationInFront();
 
 /* ---- dock.cpp ---- */
 void dockCreate();
