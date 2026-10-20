@@ -288,7 +288,16 @@ void handleCommand(SOCKET s, const Request &r, const std::string &phone)
 		args = obs_data_create();
 	std::string err;
 	touchPhone(phone);
-	if (cmd == "ping") {
+	if (cmd.rfind("cam", 0) == 0) {
+		// The camera answers straight away; the joystick and zoom don't send everyone a full update
+		std::string name;
+		for (auto &p : phones())
+			if (p.id == phone)
+				name = p.name;
+		err = camCommand(cmd, args, phone, name);
+		if (cmd != "camJoy" && cmd != "camZoom")
+			runOnUi([]() { refreshState(); }, 1500);
+	} else if (cmd == "ping") {
 	} else if (cmd == "mode") {
 		const std::string mode = obs_data_get_string(args, "mode");
 		if (mode == "presenter" || mode == "controller")
@@ -427,6 +436,19 @@ void handle(SOCKET s)
 			respondJson(s, 401, fail("This phone isn't paired."));
 		else
 			handleCommand(s, r, phone);
+	} else if (r.method == "GET" && r.path == "/api/cam") {
+		// The camera's preview ("live", a few a second while Camera is open) or the saved shot's picture ("shot")
+		if (phoneForToken(queryParam(r.query, "t")).empty()) {
+			respondJson(s, 401, fail("This phone isn't paired."));
+		} else {
+			const std::string k = queryParam(r.query, "k") == "shot" ? "shot" : "live";
+			const std::vector<unsigned char> img = camImage(k);
+			const bool png = img.size() > 4 && img[0] == 0x89 && img[1] == 'P';
+			if (img.empty())
+				respond(s, 404, "text/plain", "");
+			else
+				respond(s, 200, png ? "image/png" : "image/jpeg", std::string(img.begin(), img.end()), k == "shot");
+		}
 	} else if (r.method == "GET" && r.path == "/api/img") {
 		if (phoneForToken(queryParam(r.query, "t")).empty()) {
 			respondJson(s, 401, fail("This phone isn't paired."));

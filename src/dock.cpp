@@ -16,6 +16,11 @@ the Free Software Foundation; either version 2 of the License, or
 #include <plugin-support.h>
 
 #include <QButtonGroup>
+#include <QCheckBox>
+#include <QFormLayout>
+#include <QLineEdit>
+#include <QSlider>
+#include <QSpinBox>
 #include <QComboBox>
 #include <QDockWidget>
 #include <QGuiApplication>
@@ -190,6 +195,81 @@ public:
 		topNote->setStyleSheet("color:#8e919a;font-size:11px;");
 		lay->addWidget(topNote);
 
+		// The Baptism Cam: an OBSBOT Tiny 2, moved through OBSBOT Center
+		auto *camHead = new QLabel("CAMERA");
+		camHead->setStyleSheet("font-size:11px;font-weight:bold;letter-spacing:1px;color:#8e919a;margin-top:6px;");
+		lay->addWidget(camHead);
+		camStatus = new QLabel();
+		camStatus->setWordWrap(true);
+		lay->addWidget(camStatus);
+		camWarn = new QLabel();
+		camWarn->setWordWrap(true);
+		camWarn->setStyleSheet("color:#ff8a3d;");
+		lay->addWidget(camWarn);
+		camStartBtn = new QPushButton("Open OBSBOT Center");
+		QObject::connect(camStartBtn, &QPushButton::clicked, [this]() {
+			const std::string err = camStartCenterNow();
+			if (!err.empty())
+				QMessageBox::warning(this, "OBSBOT Center", QString::fromStdString(err));
+			last.clear();
+			refresh();
+		});
+		lay->addWidget(camStartBtn);
+		const CamPanel cp = camPanel();
+		camAuto = new QCheckBox("Start OBSBOT Center when OBS opens");
+		camAwake = new QCheckBox("Keep the laptop awake while OBS is open");
+		camUpside = new QCheckBox("Camera is mounted upside down");
+		camAuto->setChecked(cp.autoCenter);
+		camAwake->setChecked(cp.keepAwake);
+		camUpside->setChecked(cp.upside);
+		for (QCheckBox *b : {camAuto, camAwake, camUpside}) {
+			QObject::connect(b, &QCheckBox::toggled, [this]() { saveCam(); });
+			lay->addWidget(b);
+		}
+		auto *speedRow = new QHBoxLayout();
+		speedRow->addWidget(new QLabel("Joystick top speed"));
+		camSpeed = new QSlider(Qt::Horizontal);
+		camSpeed->setRange(30, 100);
+		camSpeed->setSingleStep(5);
+		camSpeed->setPageStep(10);
+		camSpeed->setValue(cp.topSpeed);
+		camSpeedV = new QLabel(QString("%1%").arg(cp.topSpeed));
+		camSpeedV->setMinimumWidth(40);
+		QObject::connect(camSpeed, &QSlider::valueChanged, [this](int v) { camSpeedV->setText(QString("%1%").arg(v)); });
+		QObject::connect(camSpeed, &QSlider::sliderReleased, [this]() { saveCam(); });
+		speedRow->addWidget(camSpeed, 1);
+		speedRow->addWidget(camSpeedV);
+		lay->addLayout(speedRow);
+		camCheckBtn = new QPushButton("Check directions");
+		camCheckBtn->setToolTip("Nudges the camera left, then back. If the picture moves right first, tick \"mounted upside down\".");
+		QObject::connect(camCheckBtn, &QPushButton::clicked, [this]() {
+			const std::string err = camCheckDirections();
+			if (!err.empty())
+				QMessageBox::warning(this, "Check directions", QString::fromStdString(err));
+			else
+				camWarn->setText("Checking: the picture should move left, then come back. If it went right first, tick "
+						 "\"Camera is mounted upside down\" and check again.");
+		});
+		lay->addWidget(camCheckBtn);
+		auto *form = new QFormLayout();
+		form->setContentsMargins(0, 0, 0, 0);
+		camDir = new QLineEdit(QString::fromStdString(cp.centerDir));
+		camPort = new QSpinBox();
+		camReply = new QSpinBox();
+		for (QSpinBox *b : {camPort, camReply})
+			b->setRange(1024, 65535);
+		camPort->setValue(cp.oscPort);
+		camReply->setValue(cp.replyPort);
+		camPort->setToolTip("The OSC port set in OBSBOT Center");
+		camReply->setToolTip("Where OBSBOT Center sends its answers");
+		QObject::connect(camDir, &QLineEdit::editingFinished, [this]() { saveCam(); });
+		QObject::connect(camPort, &QSpinBox::editingFinished, [this]() { saveCam(); });
+		QObject::connect(camReply, &QSpinBox::editingFinished, [this]() { saveCam(); });
+		form->addRow("OBSBOT Center folder", camDir);
+		form->addRow("OSC port", camPort);
+		form->addRow("Reply port", camReply);
+		lay->addLayout(form);
+
 		auto *head = new QLabel("PAIRED PHONES");
 		head->setStyleSheet("font-size:11px;font-weight:bold;letter-spacing:1px;color:#8e919a;margin-top:6px;");
 		lay->addWidget(head);
@@ -214,6 +294,11 @@ public:
 			names += s->name().toStdString() + ";";
 		std::string sig = address + "|" + c + "|" + k + "|" + (pj ? pj->name().toStdString() : "-") + "|" + choice +
 				  "|" + names + "|" + (isProjecting() ? "P" : "-") + "|" + onTop();
+		{
+			const CamPanel c2 = camPanel();
+			sig += "|cam" + c2.err + (c2.usb ? "u" : "-") + (c2.running ? "r" : "-") + (c2.answering ? "a" : "-") +
+			       (c2.starting ? "s" : "-") + (c2.busy ? "b" : "-") + (c2.hasSource ? "h" : "-");
+		}
 		const auto ph = phones();
 		for (auto &p : ph)
 			sig += "|" + p.id + p.name + p.mode + (p.online ? "1" : "0") + ago(p.lastSeen).toStdString();
@@ -286,6 +371,33 @@ public:
 		projBtn->setStyleSheet(on ? "QPushButton{background:#F5B700;color:#132932;font-weight:bold;border-radius:6px;}"
 					  : "QPushButton{font-weight:bold;}");
 
+		// The camera's status
+		{
+			const CamPanel cp = camPanel();
+			const QString what = !cp.usb ? "Not plugged in"
+					    : cp.starting ? "Starting OBSBOT Center…"
+					    : !cp.running ? "OBSBOT Center is closed"
+					    : cp.answering ? QString("Through OBSBOT Center · OSC port %1").arg(cp.oscPort)
+							   : QString("OBSBOT Center is open but hasn't answered on OSC port %1 yet").arg(cp.oscPort);
+			const bool ready = cp.err.empty();
+			camStatus->setText(QString("<span style='color:%1'>●</span> <b>OBSBOT Tiny 2</b> · %2 · <b>%3</b>")
+						   .arg(ready ? "#3ccf7e" : "#666")
+						   .arg(what.toHtmlEscaped())
+						   .arg(cp.starting ? "Starting" : ready ? "Ready" : "Offline"));
+			QString warn;
+			if (cp.busy)
+				warn = "OBS isn't getting the camera's picture. OBSBOT Center's preview is probably holding it: turn off "
+				       "the preview there (the eye icon).";
+			else if (cp.usb && !cp.hasSource)
+				warn = "No OBS camera source for the OBSBOT was found, so phones can't show a preview. Add the camera "
+				       "to the Baptism Cam scene as a Video Capture Device.";
+			if (!camWarn->text().startsWith("Checking"))
+				camWarn->setText(warn);
+			camWarn->setVisible(!camWarn->text().isEmpty());
+			camStartBtn->setVisible(cp.usb && !cp.running && !cp.starting);
+			camCheckBtn->setEnabled(ready);
+		}
+
 		while (QLayoutItem *it = list->takeAt(0)) {
 			if (QWidget *w = it->widget())
 				w->deleteLater();
@@ -331,6 +443,24 @@ private:
 	QVBoxLayout *lay = nullptr, *list = nullptr;
 	QLabel *qr = nullptr, *url = nullptr, *code = nullptr, *projector = nullptr;
 	QComboBox *screenBox = nullptr;
+	void saveCam()
+	{
+		CamPanel p = camPanel();
+		p.autoCenter = camAuto->isChecked();
+		p.keepAwake = camAwake->isChecked();
+		p.upside = camUpside->isChecked();
+		p.topSpeed = camSpeed->value();
+		p.oscPort = camPort->value();
+		p.replyPort = camReply->value();
+		p.centerDir = camDir->text().trimmed().toStdString();
+		camSetPanel(p);
+	}
+	QLabel *camStatus = nullptr, *camWarn = nullptr, *camSpeedV = nullptr;
+	QPushButton *camStartBtn = nullptr, *camCheckBtn = nullptr;
+	QCheckBox *camAuto = nullptr, *camAwake = nullptr, *camUpside = nullptr;
+	QSlider *camSpeed = nullptr;
+	QLineEdit *camDir = nullptr;
+	QSpinBox *camPort = nullptr, *camReply = nullptr;
 	QPushButton *projBtn = nullptr, *topAuto = nullptr, *topObs = nullptr, *topPres = nullptr;
 	QLabel *topNote = nullptr;
 

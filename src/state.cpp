@@ -574,6 +574,7 @@ void refreshState()
 	}
 	obs_frontend_source_list_free(&list);
 
+	camProgram(program); // wakes the camera when Baptism Cam goes live
 	const bool rec = obs_frontend_recording_active();
 	if (rec && !g_recStart)
 		g_recStart = nowMs();
@@ -601,7 +602,7 @@ void refreshState()
 			   ",\"recT0\":" + std::to_string(g_recStart) + ",\"proj\":" + (projecting ? "true" : "false") +
 			   ",\"pjFound\":" + (pj ? "true" : "false") + ",\"onTop\":\"" + onTop() + "\"" +
 			   ",\"presFront\":" + (presentationInFront() || !projecting ? "true" : "false") + ",\"pjName\":\"" + jsonEscape(projectorLabel()) +
-			   "\"" + ",\"slides\":" + slidesJson() + "}";
+			   "\"" + ",\"slides\":" + slidesJson() + ",\"cam\":" + camJson() + "}";
 
 	bool changed = false;
 	{

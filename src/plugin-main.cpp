@@ -37,6 +37,7 @@ static void startAll()
 	g_started = true;
 	front::stateInit();
 	front::slidesStart();
+	front::camStart();
 	if (!front::serverStart())
 		obs_log(LOG_WARNING, "the phone remote couldn't start on port %d", front::kPort);
 
@@ -47,6 +48,7 @@ static void startAll()
 		front::applyOnTop();
 		front::refreshState();
 		front::slidesTick();
+		front::camTick();
 		front::dockRefresh();
 	});
 	g_timer->start();
@@ -68,6 +70,7 @@ static void stopAll()
 	front::stateShutdown(); // first, so nothing waits on OBS's UI thread while it closes
 	front::serverStop();
 	front::slidesStop();
+	front::camStop();
 }
 
 static void onFrontendEvent(enum obs_frontend_event event, void *)

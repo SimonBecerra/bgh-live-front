@@ -140,6 +140,67 @@ svg.i{width:20px;height:20px;flex:none;stroke:currentColor;fill:none;stroke-widt
 .act.rec[aria-pressed="true"] small{color:rgba(255,255,255,.85)}
 .act.rec[aria-pressed="true"] .rdot{background:#fff;border-radius:3px;animation:blink 1.4s infinite}
 .act:disabled{opacity:.45}
+/* Camera button: a square icon between Record and Swap */
+.acts:has(.act.cam){grid-template-columns:minmax(0,1fr) 72px minmax(0,1fr)}
+.act.cam{width:72px;min-height:72px;padding:0;align-items:center;justify-content:center;color:var(--accent)}
+.act.cam svg.i{width:30px;height:30px}
+.act.cam.na{color:var(--muted)}
+
+/* Camera sheet: a small preview, the joystick, the zoom slider, Set and Go to shot, then Done */
+.scrim .cam-sheet{height:min(calc(100% - 6px), 720px);max-height:none;overflow:hidden;gap:10px;padding-top:14px}
+.cam-sheet > *{flex:none}
+.cam-h{display:flex;align-items:center;gap:10px}
+.cam-h h3{flex:1;display:flex;flex-direction:column;gap:2px}
+.cam-h h3 small{font-size:12px;font-weight:500;color:var(--muted)}
+.live-tag{flex:none;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#fff;background:var(--rec);border-radius:6px;padding:4px 7px}
+.cam-pv{position:relative;align-self:center;height:clamp(64px, 20vh, 158px);width:auto;max-width:100%;aspect-ratio:16/9;border-radius:10px;overflow:hidden;background:#000;border:2px solid var(--line-2);flex:none}
+.cam-pv.live{border-color:var(--rec)}
+.cam-pv img{display:block;width:100%;height:100%;object-fit:cover}
+.cam-pv .age{position:absolute;bottom:5px;right:7px;font-size:10px;color:rgba(255,255,255,.8);text-shadow:0 1px 2px #000}
+.cam-pv .none{position:absolute;inset:0;display:grid;place-items:center;font-size:12px;color:var(--dim)}
+.cam-sheet > .joy-wrap{flex:1 1 0;min-height:110px}
+.joy-wrap{container-type:size;position:relative;display:grid;place-items:center;padding:0;border-radius:16px;background:var(--bg);border:1px solid var(--line)}
+.joy{position:relative;width:min(210px, calc(100cqh - 12px), calc(100cqw - 24px));aspect-ratio:1;height:auto;border-radius:50%;background:var(--panel-2);border:1px solid var(--line-2);touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;cursor:grab}
+.joy::before{content:"";position:absolute;inset:12%;border-radius:50%;border:1px dashed var(--line-2)}
+.joy .tick{position:absolute;width:0;height:0;border:6px solid transparent}
+.joy .tick.n{top:8px;left:50%;margin-left:-6px;border-bottom-color:var(--dim)}
+.joy .tick.s{bottom:8px;left:50%;margin-left:-6px;border-top-color:var(--dim)}
+.joy .tick.w{left:8px;top:50%;margin-top:-6px;border-right-color:var(--dim)}
+.joy .tick.e{right:8px;top:50%;margin-top:-6px;border-left-color:var(--dim)}
+.knob{position:absolute;left:32%;top:32%;width:36%;height:36%;border-radius:50%;background:var(--fg);box-shadow:0 6px 18px rgba(0,0,0,.45);transition:transform .18s cubic-bezier(.3,1.4,.5,1);pointer-events:none}
+.knob.drag{transition:none;background:var(--accent)}
+.joy:focus-visible{outline:2px solid var(--accent);outline-offset:4px}
+.zs{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:10px;align-items:center}
+.zs > svg.i{color:var(--muted)}
+.zs-track{position:relative;height:44px;touch-action:none}
+.zs-track::before{content:"";position:absolute;left:0;right:0;top:50%;height:6px;margin-top:-3px;border-radius:3px;background:var(--panel-2);border:1px solid var(--line)}
+.zs-fill{position:absolute;left:0;top:50%;height:6px;margin-top:-3px;border-radius:3px;background:var(--accent)}
+.zs-thumb{position:absolute;top:50%;width:30px;height:30px;margin:-15px 0 0 -15px;border-radius:50%;background:var(--fg);box-shadow:0 2px 8px rgba(0,0,0,.4);cursor:grab;touch-action:none}
+.zs-thumb::after{content:"";position:absolute;inset:-8px}
+.zs-thumb.drag{background:var(--accent)}
+.zs-thumb:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.zs-val{min-width:58px;text-align:right;font-size:16px}
+.shot{display:grid;grid-template-columns:1fr 2fr;gap:10px}
+.shot .btn{min-height:60px;font-size:15px}
+.shot-go{justify-content:flex-start;text-align:left;padding:0 10px;gap:10px}
+.shot-go span{display:flex;flex-direction:column;gap:2px;min-width:0}
+.shot-go small{font-size:12px;font-weight:500;color:var(--muted)}
+.shot-go > svg.i{flex:none}
+.shot-go.empty{opacity:.4}
+.shot-go.armed{border-color:var(--accent);background:var(--accent-soft);animation:swapArm .9s ease-in-out infinite}
+.shot-go.armed small{color:var(--accent);font-weight:700}
+@media (prefers-reduced-motion:reduce){.shot-go.armed{animation:none}}
+.shot-go.at > svg.i{color:var(--accent)}
+.shot-th{margin-left:auto;position:relative;display:block;width:68px;aspect-ratio:16/9;border-radius:5px;overflow:hidden;background:#000;flex:none}
+.shot-th img{display:block;width:100%;height:100%;object-fit:cover}
+.shot-go.at{border-color:var(--accent);background:var(--accent-soft)}
+.shot-go.at small{color:var(--accent)}
+.cam-note{font-size:12px!important;text-align:center}
+@media (max-height:720px){.cam-note{display:none}.shot .btn{min-height:50px}.cam-done{min-height:46px}.zs-track{height:38px}}
+.ban-col{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+.ban-col .btn{min-height:40px;font-size:14px;padding:0 14px}
+.cam-done{flex:none;width:100%;min-height:52px;border-color:var(--accent);color:var(--accent);background:transparent}
+.cam-sheet.na .cam-ctl{opacity:.4;pointer-events:none}
 
 /* Presenter mode: the slide itself fills the phone, with what's next underneath */
 .mode-chip{display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 8px;border-radius:999px;border:1px solid var(--line-2);font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);flex:none}
@@ -296,6 +357,11 @@ const ICON = {
   down:'<path d="m6 9 6 6 6-6"/>',
   target:'<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>',
   stopshow:'<path d="M2 3h20"/><path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3"/><path d="m7 21 5-5 5 5"/><path d="m9.5 7 5 5"/><path d="m14.5 7-5 5"/>',
+  cam:'<circle cx="12" cy="10" r="7"/><circle cx="12" cy="10" r="3"/><path d="M12 17v4"/><path d="M7 21h10"/>',
+  zin:'<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/><path d="M11 8v6"/><path d="M8 11h6"/>',
+  zout:'<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/><path d="M8 11h6"/>',
+  switchcam:'<path d="M11 19H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5"/><path d="M13 5h7a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-5"/><circle cx="12" cy="12" r="3"/><path d="m18 22-3-3 3-3"/><path d="m6 2 3 3-3 3"/>',
+  scansq:'<path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><rect width="10" height="10" x="7" y="7" rx="1"/>',
   swap:'<path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/>',
   cast:'<path d="M2 8V6a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6"/><path d="M2 12a9 9 0 0 1 8 8"/><path d="M2 16a5 5 0 0 1 4 4"/><line x1="2" x2="2.01" y1="20" y2="20"/>',
   ctrl:'<path d="M11.146 15.854a1.207 1.207 0 0 1 1.708 0l1.56 1.56A2 2 0 0 1 15 18.828V21a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1v-2.172a2 2 0 0 1 .586-1.414z"/><path d="M18.828 15a2 2 0 0 1-1.414-.586l-1.56-1.56a1.207 1.207 0 0 1 0-1.708l1.56-1.56A2 2 0 0 1 18.828 9H21a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1z"/><path d="M6.586 14.414A2 2 0 0 1 5.172 15H3a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1h2.172a2 2 0 0 1 1.414.586l1.56 1.56a1.207 1.207 0 0 1 0 1.708z"/><path d="M9 3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2.172a2 2 0 0 1-.586 1.414l-1.56 1.56a1.207 1.207 0 0 1-1.708 0l-1.56-1.56A2 2 0 0 1 9 5.172z"/>'
@@ -336,6 +402,7 @@ function connect(){
   es = new EventSource(`/api/events?t=${encodeURIComponent(S.token)}&mode=${S.mode}`);
   es.addEventListener("hello", e => { const d = JSON.parse(e.data); S.offset = (d.now || Date.now()) - Date.now(); S.connected = true; render(); });
   es.addEventListener("state", e => { S.st = JSON.parse(e.data); S.connected = true; if(S.armed && S.st.program === S.armed) S.armed = null; render(); });
+  es.addEventListener("cam", e => { try{ camEvt(JSON.parse(e.data)); }catch(x){} });
   es.addEventListener("unpaired", () => unpair("This phone was removed on the front laptop. Pair it again to use it."));
   es.onopen = () => { S.connected = true; render(); };
   es.onerror = async () => {
@@ -380,6 +447,8 @@ function headerHTML(){
 }
 
 function render(){
+  if(S.held || S.zDrag){ S.renderLater = true; return; }   // a finger is on the joystick or zoom: redraw when it lets go
+  clearInterval(S.pvT);
   const P = $("phone");
   if(!S.token){ P.className = "phone"; P.innerHTML = pairHTML(); wirePair(); return; }
   if(!S.mode){ P.className = "phone"; P.innerHTML = modePickHTML(); wireModePick(); return; }
@@ -463,6 +532,7 @@ function controllerHTML(){
       <span class="t"><i class="rdot"></i>${st.rec ? `<span class="tn" id="recT">${fmt(now() - st.recT0)}</span>` : "Record"}</span>
       <small>${st.rec ? "Recording · tap to stop" : "Not recording"}</small>
     </button>
+    <button class="act cam${camSt().ok ? "" : " na"}" id="camBtn" type="button" aria-haspopup="dialog" aria-label="Camera. ${esc(camSub())}">${ic("cam")}</button>
     <button class="act swap-btn${S.swapArmed ? " armed" : ""}" id="swapBtn" type="button" ${st.pjFound ? "" : "disabled"} aria-label="${S.swapArmed ? "Tap again to swap" : "Swap presentation and projection. " + (st.presFront ? "The presentation is in front" : "The projection is in front")}">
       <span class="${st.presFront ? "front" : ""}">${ic("proj")}</span>${ic("swap")}<span class="${st.presFront ? "" : "front"}">${ic("cast")}</span>
     </button>
@@ -520,6 +590,11 @@ function wire(){
       const r = await cmd("swap");
       if(r.ok) toast(toPres ? "The presentation is in front." : starting ? "Projecting the Black scene, in front of the presentation." : "OBS's projection is in front.");
     };
+    $("camBtn").onclick = () => {
+      if(live() && S.st.cam && S.st.cam.usb === false){ toast("Camera not detected"); return; }   // nothing to control, so the sheet stays closed
+      S.camLive = null; S.sheet = camHTML; render();
+      camCmd("camOpen");   // wakes the camera if it has gone to sleep
+    };
     $("rec").onclick = async () => {
       if(S.st && S.st.rec){ S.sheet = stopHTML; render(); return; }
       const r = await cmd("rec", {on:true});
@@ -530,6 +605,7 @@ function wire(){
   if(S.sheet === pjStopHTML) wirePjStop();
   if(S.sheet === swapHTML) wireSwap();
   if(S.sheet === endShowHTML) wireEndShow();
+  if(S.sheet === camHTML) wireCam();
 }
 
 function endShowHTML(){
@@ -596,10 +672,199 @@ function wireStop(){
   $("stopYes").onclick = async () => { S.sheet = null; render(); const r = await cmd("rec", {on:false}); if(r.ok) toast("Recording saved on the front laptop."); };
 }
 
+/* ---------------------------------------------------------------- Camera (Controller mode) */
+const zoomX = z => (1 + 3 * z / 100).toFixed(2) + "×";   // Tiny 2: 1× to 4× zoom
+const camSt = () => (S.st && S.st.cam) || {ok:false, err:"", zoom:0, zoomTo:0, shot:null, at:false};
+const camZoomNow = () => S.camLive ? S.camLive.zoom : camSt().zoom;
+const camAt = () => S.camLive ? S.camLive.at : camSt().at;
+function camSub(){
+  const c = camSt();
+  if(!c.ok) return c.usb === false ? "Camera not detected" : c.starting ? "Starting OBSBOT Center" : c.waking ? "Waking the camera" : "OBSBOT Center closed";
+  return "Zoom " + zoomX(camZoomNow());
+}
+// Camera commands: fire and forget, and a lost connection says so at most every few seconds (the joystick sends a lot)
+async function camCmd(c, args = {}){
+  const say = m => { if(Date.now() - (S.camToastAt || 0) > 2500){ S.camToastAt = Date.now(); toast(m); } };
+  let r;
+  try{ r = await fetch("/api/cmd", {method:"POST", headers:{"Content-Type":"application/json", "Authorization":"Bearer " + S.token}, body:JSON.stringify({cmd:c, args})}); }
+  catch(e){ say("Can't reach the front laptop. Check this phone is on the church Wi-Fi."); return {ok:false}; }
+  if(r.status === 401){ unpair("This phone isn't paired with the front laptop any more. Pair it again to use it."); return {ok:false}; }
+  let j = {ok:false}; try{ j = await r.json(); }catch(e){}
+  if(!j.ok && j.error) say(j.error);
+  return j;
+}
+// The live camera numbers arrive a few times a second; only the numbers on screen change, nothing is redrawn
+function camEvt(d){
+  S.camLive = d;
+  const z = $("zoomV"); if(z) z.textContent = zoomX(d.zoom);
+  const go = $("shotGo"), c = camSt();
+  if(go && c.shot && !S.goArmed) go.classList.toggle("at", d.at);
+}
+const camImg = (k, v) => `/api/cam?t=${encodeURIComponent(S.token)}&k=${k}&v=${v}`;
+function camHTML(){
+  const c = camSt(), na = !live() || !c.ok, at = camAt();
+  return `<div class="scrim" id="scrim"><div class="sheet cam-sheet${na ? " na" : ""}" role="dialog" aria-modal="true" aria-labelledby="camH">
+    <div class="cam-h"><h3 id="camH">Camera<small>OBSBOT Tiny 2</small></h3>${c.live ? `<span class="live-tag">Live on stream</span>` : ""}</div>
+    ${live() && c.ok && c.busy ? `<div class="banner">${ic("video")}<div>OBS isn't getting the camera's picture. On the laptop, turn off the preview in OBSBOT Center (the eye icon). The controls still work.</div></div>` : ""}
+    ${live() && !c.ok ? `<div class="banner">${ic(c.starting || c.waking ? "hourglass" : "wifi")}<div class="ban-col">${esc(c.err)}${c.canStart ? `<button class="btn" id="startCenter" type="button">Open OBSBOT Center</button>` : ""}</div></div>` : ""}
+    <div class="cam-pv${c.live ? " live" : ""}">${live() ? `<img id="camPv" src="${camImg("live", S.pvN || 0)}" alt="What the camera sees"><span class="age">Preview · a moment behind</span>` : `<span class="none">No preview</span>`}</div>
+    <div class="joy-wrap cam-ctl">
+      <div class="joy" id="joy" tabindex="0" role="application" aria-label="Camera joystick. Drag, or hold the arrow keys, to move the camera. Let go to stop.">
+        <i class="tick n"></i><i class="tick s"></i><i class="tick w"></i><i class="tick e"></i>
+        <div class="knob" id="knob"></div>
+      </div>
+    </div>
+    <div class="zs cam-ctl">
+      ${ic("zout")}
+      <div class="zs-track" id="zTrack"><i class="zs-fill" id="zFill" style="width:${c.zoomTo}%"></i>
+        <div class="zs-thumb" id="zThumb" tabindex="0" role="slider" aria-label="Zoom" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${c.zoomTo}" aria-valuetext="${zoomX(c.zoomTo)}" style="left:${c.zoomTo}%"></div></div>
+      ${ic("zin")}
+      <b class="zs-val tn" id="zoomV">${zoomX(camZoomNow())}</b>
+    </div>
+    <div class="shot cam-ctl">
+      <button class="btn" id="shotSet" type="button">${ic("scansq")}Set</button>
+      <button class="btn shot-go${c.shot ? "" : " empty"}${c.shot && at ? " at" : ""}${S.goArmed ? " armed" : ""}" id="shotGo" type="button" aria-label="${S.goArmed ? "Tap again to go to the saved shot" : c.shot ? (at ? "Go to Shot. On the saved shot" : "Go to Shot") : "Go to Shot. No shot saved yet"}">
+        ${ic("switchcam")}
+        <span>Go to Shot</span>
+        ${c.shot ? `<i class="shot-th"><img src="${camImg("shot", c.shot.v)}" alt=""></i>` : ""}
+      </button>
+    </div>
+    <button class="btn cam-done" id="camX" type="button">Done</button>
+  </div></div>`;
+}
+/* The joystick: speed grows with distance from the middle. A small dead zone stops a resting thumb drifting the camera,
+   and the curve keeps the first half of the travel slow, so moves look smooth on the stream. Let go and it springs back. */
+const JOY_DZ = 0.14;
+function joySpeeds(dx, dy, R){
+  const len = Math.hypot(dx, dy), f = Math.min(1, len / R);
+  if(f < JOY_DZ) return {x:0, y:0};
+  const s = 6 + 94 * Math.pow((f - JOY_DZ) / (1 - JOY_DZ), 2);
+  const q = v => { const n = Math.round(v / 2) * 2; return Math.abs(n) < 4 ? 0 : n; };   // near-straight pushes stay straight
+  return {x:q(s * dx / len), y:q(-s * dy / len)};
+}
+function stopHeld(){ if(S.held){ const f = S.held; S.held = null; f(); } }
+// While a finger is on the joystick or the zoom, updates from the laptop wait, so the control under the finger isn't replaced
+function dragEnded(){ if(!S.held && !S.zDrag && S.renderLater){ S.renderLater = false; render(); } }
+function wireCam(){
+  const close = () => { stopHeld(); clearTimeout(S.goT); S.goArmed = false; S.sheet = null; render(); };
+  $("camX").onclick = close;
+  if($("startCenter")) $("startCenter").onclick = async () => { const r = await camCmd("camStartCenter"); if(r.ok) toast("Starting OBSBOT Center on the front laptop."); };
+  $("scrim").onclick = e => { if(e.target.id === "scrim") close(); };
+  $("shotSet").onclick = async () => { const had = !!camSt().shot, r = await camCmd("camSet"); if(r.ok) toast(had ? "Shot replaced. Go to shot comes back here." : "Shot saved. Go to shot comes back here."); };
+  // Double tap to go, like Swap: the first tap arms it for 3 seconds, the second moves the camera
+  $("shotGo").onclick = async () => {
+    const c = camSt();
+    if(!c.shot){ toast("No shot saved yet. Aim the camera, then press Set."); return; }
+    if(camAt()){ toast("The camera is already on the saved shot."); return; }
+    clearTimeout(S.goT);
+    if(!S.goArmed){ S.goArmed = true; render(); S.goT = setTimeout(() => { S.goArmed = false; render(); }, 3000); return; }
+    S.goArmed = false; render();
+    const r = await camCmd("camGo"); if(r.ok) toast("Going to the saved shot.");
+  };
+
+  // The preview: a still frame from the laptop about 4 times a second, loaded in the background then swapped in
+  clearInterval(S.pvT);
+  if($("camPv")) S.pvT = setInterval(() => {
+    if(S.pvBusy) return;
+    const el = $("camPv"); if(!el){ clearInterval(S.pvT); return; }
+    S.pvBusy = true; S.pvN = (S.pvN || 0) + 1;
+    const im = new Image();
+    im.onload = () => { S.pvBusy = false; const e2 = $("camPv"); if(e2) e2.src = im.src; };
+    im.onerror = () => { S.pvBusy = false; };
+    im.src = camImg("live", S.pvN);
+  }, 250);
+
+  const joy = $("joy"), knob = $("knob");
+  const joyR = () => Math.max(20, (joy.clientWidth - knob.offsetWidth) / 2);   // how far the knob can travel, at whatever size the stick is drawn
+  let want = {x:0, y:0}, sent = {x:0, y:0}, tLast = 0, pend = null, rep = null;
+  const flush = () => {
+    pend = null;
+    if(want.x === sent.x && want.y === sent.y) return;
+    sent = {...want}; tLast = performance.now(); camCmd("camJoy", sent);
+  };
+  const push = sp => {   // at most one message every 80 ms while dragging
+    want = sp;
+    if(pend) return;
+    const wait = 80 - (performance.now() - tLast);
+    wait <= 0 ? flush() : pend = setTimeout(flush, wait);
+  };
+  const grab = () => {
+    stopHeld();
+    if(!live() || !camSt().ok){ toast(live() ? camSt().err : "Can't reach the front laptop."); return false; }
+    knob.classList.add("drag");
+    // Keep telling the laptop "still pushing" every 250 ms; if these stop, the laptop stops the camera by itself
+    rep = setInterval(() => { if(sent.x || sent.y) camCmd("camJoy", sent); }, 250);
+    S.held = () => {
+      clearTimeout(pend); pend = null; clearInterval(rep); rep = null;
+      knob.classList.remove("drag"); knob.style.transform = ""; want = {x:0, y:0};
+      if(sent.x || sent.y){ sent = {x:0, y:0}; camCmd("camJoy", sent); }
+      setTimeout(dragEnded, 0);
+    };
+    return true;
+  };
+  const at = e => {
+    const r = joy.getBoundingClientRect();
+    let dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2);
+    const len = Math.hypot(dx, dy);
+    const R = joyR(); if(len > R){ dx *= R / len; dy *= R / len; }
+    knob.style.transform = `translate(${dx.toFixed(1)}px, ${dy.toFixed(1)}px)`;
+    push(len ? joySpeeds(dx, dy, R) : {x:0, y:0});
+  };
+  joy.onpointerdown = e => { e.preventDefault(); try{ joy.setPointerCapture(e.pointerId); }catch(x){} if(grab()) at(e); };
+  joy.onpointermove = e => { if(S.held) at(e); };
+  joy.onpointerup = joy.onpointercancel = joy.onlostpointercapture = () => stopHeld();
+  joy.oncontextmenu = e => e.preventDefault();
+  // Keyboard: hold the arrow keys (three quarters of the way out, so it stays gentle)
+  const keys = new Set(), KX = {ArrowLeft:-1, ArrowRight:1}, KY = {ArrowUp:-1, ArrowDown:1};
+  const keyMove = () => {
+    const dx = [...keys].reduce((s, k) => s + (KX[k] || 0), 0), dy = [...keys].reduce((s, k) => s + (KY[k] || 0), 0);
+    if(!dx && !dy){ stopHeld(); return; }
+    if(!S.held && !grab()) return;
+    const R = joyR(), n = Math.hypot(dx, dy), ox = dx / n * R * 0.75, oy = dy / n * R * 0.75;
+    knob.style.transform = `translate(${ox}px, ${oy}px)`; push(joySpeeds(ox, oy, R));
+  };
+  joy.onkeydown = e => { if(e.key in KX || e.key in KY){ e.preventDefault(); if(!e.repeat){ keys.add(e.key); keyMove(); } } };
+  joy.onkeyup = e => { if(keys.delete(e.key)) keyMove(); };
+  joy.onblur = () => { keys.clear(); stopHeld(); };
+
+  // Zoom slider: only the round thumb moves it. A tap on the track does nothing, so a stray tap can't jump the zoom on stream.
+  const track = $("zTrack"), th = $("zThumb"), fill = $("zFill");
+  let zLast = 0, zPend = null, zNow = null;
+  const show = z => { th.style.left = z + "%"; fill.style.width = z + "%"; th.setAttribute("aria-valuenow", Math.round(z)); th.setAttribute("aria-valuetext", zoomX(z)); };
+  const zSend = (z, final) => { clearTimeout(zPend); zPend = null; zLast = performance.now(); camCmd("camZoom", {z:Math.round(z), final:!!final}); };
+  th.onpointerdown = e => {
+    e.preventDefault(); e.stopPropagation();
+    if(!live() || !camSt().ok){ toast(live() ? camSt().err : "Can't reach the front laptop."); return; }
+    try{ th.setPointerCapture(e.pointerId); }catch(x){}
+    S.zDrag = true; th.classList.add("drag");
+  };
+  th.onpointermove = e => {
+    if(!S.zDrag) return;
+    const r = track.getBoundingClientRect();
+    zNow = Math.min(100, Math.max(0, (e.clientX - r.left) / r.width * 100));
+    show(zNow);
+    const wait = 80 - (performance.now() - zLast);
+    clearTimeout(zPend); const z = zNow; wait <= 0 ? zSend(z) : zPend = setTimeout(() => zSend(z), wait);
+  };
+  th.onpointerup = th.onpointercancel = th.onlostpointercapture = () => {
+    if(!S.zDrag) return;
+    S.zDrag = false; th.classList.remove("drag");
+    if(zNow != null) zSend(zNow, true);
+    zNow = null; setTimeout(dragEnded, 0);
+  };
+  th.onkeydown = e => {
+    const step = {ArrowLeft:-5, ArrowDown:-5, ArrowRight:5, ArrowUp:5, PageDown:-20, PageUp:20}[e.key];
+    const cur = parseFloat(th.style.left) || 0;
+    const to = e.key === "Home" ? 0 : e.key === "End" ? 100 : step != null ? Math.min(100, Math.max(0, cur + step)) : null;
+    if(to == null) return;
+    e.preventDefault(); show(to); zSend(to, true);
+  };
+}
+
 /* After pairing, each phone says how it will be used */
 const MODE_INFO = {
   presenter:{icon:"slides", name:"Presenter", text:"Manage Slideshow"},
-  controller:{icon:"ctrl", name:"Controller", text:"Manage Live Translator, Baptism Cam"}
+  controller:{icon:"ctrl", name:"Controller", text:"Manage Live Translator, Baptism Cam, Camera"}
 };
 function modePickHTML(){
   return `<div class="pair">

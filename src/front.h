@@ -20,6 +20,7 @@ the Free Software Foundation; either version 2 of the License, or
 #include <vector>
 
 class QScreen;
+struct obs_data; // libobs's settings object (obs_data_t)
 
 namespace front {
 
@@ -107,6 +108,29 @@ std::string slidesApp();
 void applyOnTop(bool restore = false);
 // True while the presentation is in front of OBS's projector on the projector screen
 bool presentationInFront();
+
+/* ---- camera.cpp: the Baptism Cam (OBSBOT Tiny 2, through OBSBOT Center's OSC) ---- */
+void camStart();
+void camStop();
+void camTick();                          // UI thread, once a second
+void camProgram(const std::string &program); // the scene in Program now (wakes the camera when Baptism Cam goes live)
+std::string camJson();                   // the "cam" part of the state phones get
+// Camera commands from phones (any thread). Returns "" or what went wrong.
+std::string camCommand(const std::string &cmd, ::obs_data *args, const std::string &phoneId,
+		       const std::string &phoneName);
+std::vector<unsigned char> camImage(const std::string &which); // "live" or "shot", a JPEG (or PNG)
+struct CamPanel {
+	bool autoCenter = true, keepAwake = true, upside = false;
+	int topSpeed = 100, oscPort = 16284, replyPort = 16285;
+	std::string centerDir;
+	// read only
+	std::string err;
+	bool usb = true, running = false, answering = false, starting = false, busy = false, hasSource = false;
+};
+CamPanel camPanel();
+void camSetPanel(const CamPanel &p);
+std::string camStartCenterNow();
+std::string camCheckDirections();
 
 /* ---- dock.cpp ---- */
 void dockCreate();
