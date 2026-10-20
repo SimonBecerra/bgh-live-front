@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Turns The New Believers Hymn Book text file into data/new-believers.json for the remote's Hymns mode.
+"""Turns The New Believers Hymn Book text file into data/new-believers.json for the remote's Hymn Sing mode.
 
     python3 tools/new-believers-to-json.py "The New Believers Hymn Book.txt"
 

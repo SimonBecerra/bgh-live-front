@@ -142,7 +142,7 @@ svg.i{width:20px;height:20px;flex:none;stroke:currentColor;fill:none;stroke-widt
 .act:disabled{opacity:.45}
 
 /* Presenter mode: the slide itself fills the phone, with what's next underneath */
-.mode-chip{display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 8px;border-radius:999px;border:1px solid var(--line-2);font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);flex:none}
+.mode-chip{white-space:nowrap;display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 8px;border-radius:999px;border:1px solid var(--line-2);font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);flex:none}
 .mode-chip.is-pres{border-color:var(--accent);color:var(--accent)}
 button.mode-chip{height:24px;padding:0 10px;background:var(--panel);font-family:inherit}
 button.mode-chip svg.i{width:14px;height:14px}
@@ -886,7 +886,7 @@ function wireHymns(){
 const MODE_INFO = {
   presenter:{icon:"slides", name:"Presenter", text:"Manage Slideshow"},
   controller:{icon:"ctrl", name:"Controller", text:"Manage Live Translator, Baptism Cam"},
-  hymns:{icon:"book", name:"Hymns", text:"Show hymn verses on the projector"}
+  hymns:{icon:"book", name:"Hymn Sing", text:"Show hymn verses on the projector"}
 };
 function modePickHTML(){
   return `<div class="pair">

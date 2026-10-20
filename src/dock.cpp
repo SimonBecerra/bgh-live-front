@@ -364,7 +364,7 @@ public:
 			h->addWidget(name, 1);
 			auto *mode = new QLabel(p.mode == "presenter"    ? "PRESENTER"
 						: p.mode == "controller" ? "CONTROLLER"
-						: p.mode == "hymns"      ? "HYMNS"
+						: p.mode == "hymns"      ? "HYMN SING"
 									 : "CHOOSING");
 			mode->setStyleSheet(p.mode == "presenter" ? "color:#F5B700;font-size:10px;font-weight:bold;background:transparent;"
 								  : "color:#b8bbc4;font-size:10px;font-weight:bold;background:transparent;");

@@ -15,7 +15,7 @@ the Free Software Foundation; either version 2 of the License, or
 //   GET  /api/img          the current or next slide, as a PNG
 //   GET  /hymns            the Soterio hymn book, opened from here so its Presenter Mode can reach OBS (data/hymns.html)
 //   GET  /hymn-screen      the hymn verse on the projector, for an OBS Browser Source (data/hymn-screen.html)
-//   GET  /new-believers.json  The New Believers Hymn Book for the remote's Hymns mode (data/new-believers.json)
+//   GET  /new-believers.json  The New Believers Hymn Book for the remote's Hymn Sing mode (data/new-believers.json)
 //   GET  /hymn-qr.svg      the QR code /hymn-screen shows between hymns: the hymn book on the internet
 //   GET  /api/hymn-events  live updates for /hymn-screen (server-sent events): hymn. Needs no pairing: it only sends
 //                          the words on the screen
