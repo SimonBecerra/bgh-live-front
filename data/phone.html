@@ -317,6 +317,15 @@ button.mode-chip:active{transform:scale(.97)}
 .pair .modes{width:100%}
 .pair .banner{text-align:left}
 .pair h2{margin:0;font-size:26px;text-wrap:balance}
+/* The mode picker: all three modes fit on the screen, the cards share whatever height is left */
+.pair.pick{justify-content:center;gap:clamp(10px,2.2vh,18px);padding-block:clamp(12px,3vh,28px) 12px}
+.pair.pick .brand{gap:clamp(4px,1vh,10px)}
+.pair.pick .brand .logo{height:clamp(44px,9vh,84px)}
+.pair.pick h2{font-size:clamp(21px,3.2vh,26px)}
+.pair.pick .modes{flex:0 1 auto;min-height:0;max-height:100%;grid-auto-rows:minmax(0,1fr);gap:clamp(8px,1.6vh,16px)}
+.pair.pick .mode-card{min-height:0;height:100%;max-height:150px;padding:clamp(10px,2vh,20px) 20px;overflow:hidden}
+.pair.pick .mode-card b{font-size:clamp(20px,3vh,24px)}
+.pair.pick .mode-card svg.i{width:clamp(36px,5.5vh,48px);height:clamp(36px,5.5vh,48px)}
 .pair p{margin:0;color:var(--muted);line-height:1.5}
 .code{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;max-width:260px;margin:0 auto;width:100%}
 .code input{height:72px;border-radius:14px;border:1px solid var(--line-2);background:var(--panel);text-align:center;font-size:32px;font-weight:700;width:100%;box-sizing:border-box;min-width:0}
@@ -1154,7 +1163,7 @@ const MODE_INFO = {
   hymns:{icon:"book", name:"Hymn Sing", text:"Show hymn verses on the projector"}
 };
 function modePickHTML(){
-  return `<div class="pair">
+  return `<div class="pair pick">
     <h1 class="brand">${LOGO}<span><b>BGH</b> Front</span></h1>
     <h2>How will you use this phone?</h2>
     <div class="modes">${Object.entries(MODE_INFO).map(([k, m]) => `<button class="mode-card" type="button" data-mode="${k}" aria-pressed="${S.mode === k}">${ic(m.icon)}<b>${m.name}</b><span>${m.text}</span></button>`).join("")}</div>
