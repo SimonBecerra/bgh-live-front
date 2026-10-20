@@ -15,6 +15,7 @@ the Free Software Foundation; either version 2 of the License, or
 //   GET  /api/img          the current or next slide, as a PNG
 //   GET  /hymns            the Soterio hymn book, opened from here so its Presenter Mode can reach OBS (data/hymns.html)
 //   GET  /hymn-screen      the hymn verse on the projector, for an OBS Browser Source (data/hymn-screen.html)
+//   GET  /new-believers.json  The New Believers Hymn Book for the remote's Hymns mode (data/new-believers.json)
 //   GET  /hymn-qr.svg      the QR code /hymn-screen shows between hymns: the hymn book on the internet
 //   GET  /api/hymn-events  live updates for /hymn-screen (server-sent events): hymn. Needs no pairing: it only sends
 //                          the words on the screen
@@ -82,7 +83,7 @@ std::vector<std::shared_ptr<Client>> g_clients;
 std::mutex g_qm;
 std::condition_variable g_qcv;
 std::deque<Message> g_queue;
-std::string g_html, g_hymnsHtml, g_screenHtml, g_hymnQr;
+std::string g_html, g_hymnsHtml, g_screenHtml, g_hymnQr, g_nbh;
 // The hymn verse on the screen, as the JSON a phone sent ({} when the screen is clear)
 std::mutex g_hm;
 std::string g_hymn = "{}";
@@ -477,6 +478,11 @@ void handle(SOCKET s)
 	} else if (r.method == "GET" && r.path == "/hymn-screen") {
 		respond(s, 200, "text/html; charset=utf-8",
 			g_screenHtml.empty() ? "BGH LIVE Front: hymn-screen.html is missing." : g_screenHtml);
+	} else if (r.method == "GET" && r.path == "/new-believers.json") {
+		if (g_nbh.empty())
+			respond(s, 404, "text/plain; charset=utf-8", "new-believers.json is missing");
+		else
+			respond(s, 200, "application/json; charset=utf-8", g_nbh, true);
 	} else if (r.method == "GET" && r.path == "/hymn-qr.svg") {
 		respond(s, 200, "image/svg+xml", g_hymnQr, true);
 	} else if (r.method == "GET" && r.path == "/api/hymn-events") {
@@ -660,6 +666,7 @@ bool serverStart()
 	g_hymnsHtml = loadFile("hymns.html");
 	g_screenHtml = loadFile("hymn-screen.html");
 	g_hymnQr = qrSvg(kHymnBookUrl);
+	g_nbh = loadFile("new-believers.json");
 	loadIcons();
 #ifdef _WIN32
 	WSADATA wsa;

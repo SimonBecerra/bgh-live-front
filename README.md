@@ -48,7 +48,12 @@ The code changes after each phone pairs, and five wrong codes pause pairing for 
   **OBS Projector** covers everything; **Presentation** keeps whatever is on the projector in front of OBS.
 - **Scenes.** Only the five scenes above appear on the phone; other scenes in OBS are ignored. Each needs two taps.
   They're listed in `allowedScenes()` in `src/state.cpp`.
-- **Hymns.** A phone can show hymn verses on the projector with the Soterio hymn book's **Presenter Mode**. Open
+- **Hymns.** Choose **Hymns** on the remote (tap the mode label at the top to change modes), then a hymn book.
+  **The New Believers Hymn Book** works right in the remote: search by number, title or words, open a hymn, and
+  press **Show** or a verse number. **Next** goes verse, chorus, verse; **Clear screen** fades the words out.
+  Its 700 hymns are in `data/new-believers.json`; after changing the text file, run
+  `python3 tools/new-believers-to-json.py "The New Believers Hymn Book.txt"` to rebuild it.
+  **The Soterio Hymn Collection** opens that hymn book with its own **Presenter Mode**. Open
   the hymn book from the laptop, at the remote's address followed by `/hymns` (like `http://192.168.1.20:8650/hymns`),
   or choose **Hymns** on the remote. It downloads the newest hymn book from
   https://barringtongospelhall.github.io/soterio/ and keeps a copy on the phone for when there's no internet. In its

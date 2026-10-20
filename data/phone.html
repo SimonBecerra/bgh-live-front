@@ -276,6 +276,50 @@ html,body{margin:0}
 @media (prefers-reduced-motion:reduce){.pv-slide.fresh{animation:none}}
 .pv-empty{position:absolute;inset:0;display:grid;place-items:center;padding:12%;box-sizing:border-box;text-align:center;color:var(--muted);font-size:15px;line-height:1.45}
 .sc:disabled{opacity:.45}
+/* Hymns */
+.nb{flex:1;min-height:0;display:flex;flex-direction:column;gap:10px}
+.nb .modes{gap:12px}
+.nb .mode-card.book{min-height:112px}
+.nb .mode-card.book b{font-size:20px;line-height:1.2}
+.nb-q{margin:6px 0 2px;font-size:22px;text-align:center}
+.nb-bar{display:flex;align-items:center;gap:10px;flex:none;min-width:0}
+.nb-bk{font-family:var(--f-brand);font-size:19px;color:var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nb-search{flex:none}
+.nb-scroll{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;display:flex;flex-direction:column;gap:8px}
+.nb-row{display:grid;grid-template-columns:48px minmax(0,1fr) auto;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--panel);text-align:left;flex:none}
+.nb-row:active{background:var(--panel-2)}
+.nb-n{font-family:var(--f-brand);font-size:20px;font-weight:700;color:var(--accent);text-align:center;font-variant-numeric:tabular-nums}
+.nb-t{display:flex;flex-direction:column;gap:2px;min-width:0}
+.nb-t b{font-size:15px;line-height:1.25}
+.nb-t small{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nb-row.live{border-color:var(--accent);background:var(--accent-soft)}
+.nb-tag{font-style:normal;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--accent-ink);background:var(--accent);padding:3px 6px;border-radius:5px}
+.nb-ttl{display:flex;align-items:baseline;gap:8px;min-width:0}
+.nb-ttl b{font-size:18px;line-height:1.2;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.nb-ttl .nb-n{font-size:22px;text-align:left}
+.nb-meta{flex:none;font-size:12px;color:var(--muted);line-height:1.45;margin-top:-4px}
+.nb-st{display:flex;align-items:center;gap:8px;flex:none;min-height:30px;font-size:13px;font-weight:600;color:var(--muted);min-width:0}
+.nb-st span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nb-st .dot{background:var(--accent)}.nb-st .dot.idle{background:var(--dim)}
+.nb-st.other{color:var(--accent)}
+.nb-clr{flex:none;padding:6px 12px;border-radius:999px;border:1px solid var(--line-2);background:var(--panel-2);font-size:12px;font-weight:700}
+.nb-vs{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;flex:none}
+.nb-v{width:46px;height:46px;border-radius:50%;border:0;background:var(--panel-2);font-weight:700;font-size:18px;padding:0;box-sizing:border-box}
+.nb-v.on{background:var(--accent);color:var(--accent-ink)}
+.nb-v.lv:not(.on){box-shadow:inset 0 0 0 2px var(--accent)}
+.nb-blk{display:flex;gap:14px;text-align:left;padding:12px 14px;border:1.5px solid var(--line);border-radius:14px;background:var(--panel);font-family:var(--f-brand);font-weight:500;font-size:18px;line-height:1.42;white-space:pre-line;flex:none;transition:background .2s,border-color .2s}
+.nb-blk.ch{font-style:italic;padding-left:44px}.nb-blk.ch:first-child{padding-left:14px}
+.nb-vn{font-weight:700;color:var(--accent);min-width:16px;font-style:normal}
+.nb-blk.live{border-color:var(--accent);background:var(--accent-soft)}
+.nb-blk:active{opacity:.75}
+.nb-nav{grid-template-columns:64px 1fr}
+.nb-nav .btn{min-height:76px}
+.nb-nav #nbBack{background:transparent;border-color:var(--line);color:var(--muted)}
+.nb-nav #nbNext{gap:10px;font-size:20px;font-weight:800}
+.nb-nav #nbNext small{font-size:14px;font-weight:700;opacity:.8}
+.nb-nav #nbNext svg.i{width:28px;height:28px}
+.nb-nav #nbNext:disabled{opacity:1;background:var(--panel-2);border-color:var(--line-2);color:var(--muted)}
+.phone.hymns .toast{bottom:calc(100px + env(safe-area-inset-bottom,0px))}
 </style>
 </head>
 <body>
@@ -320,9 +364,10 @@ const S = {
   token:ls.get("bghFrontToken") || "", mode:ls.get("bghFrontMode"), turn:ls.get("bghFrontTurn") === "1",
   st:null, connected:false, offset:0, note:"", sheet:null, armed:null, armT:null, trOpen:false,
   nudgeUntil:0, nudgeT:null, pjBounce:false, toastT:null, x0:null, busy:false,
-  shownSrc:"", loadingSrc:"", waiting:false, waitT:null, freshUntil:0
+  shownSrc:"", loadingSrc:"", waiting:false, waitT:null, freshUntil:0, book:ls.get("bghFrontBook")
 };
-if(!["presenter", "controller"].includes(S.mode)) S.mode = null;
+if(!["presenter", "controller", "hymns"].includes(S.mode)) S.mode = null;
+if(S.book !== "nbh") S.book = null;
 const now = () => Date.now() + S.offset;   // the laptop's clock
 const mqLand = matchMedia("(orientation: landscape)");
 const physLand = () => mqLand.matches;
@@ -340,6 +385,11 @@ function connect(){
   es = new EventSource(`/api/events?t=${encodeURIComponent(S.token)}&mode=${S.mode}`);
   es.addEventListener("hello", e => { const d = JSON.parse(e.data); S.offset = (d.now || Date.now()) - Date.now(); S.connected = true; render(); });
   es.addEventListener("state", e => { S.st = JSON.parse(e.data); S.connected = true; if(S.armed && S.st.program === S.armed) S.armed = null; render(); });
+  es.addEventListener("hymn", e => {
+    let d = null; try{ d = JSON.parse(e.data); }catch(x){}
+    const n = d && d.key ? Object.assign({book:"soterio"}, d) : null;
+    if((n && n.key) !== (hymnLive && hymnLive.key)){ hymnLive = n; if(S.mode === "hymns") render(); }
+  });
   es.addEventListener("unpaired", () => unpair("This phone was removed on the front laptop. Pair it again to use it."));
   es.onopen = () => { S.connected = true; render(); };
   es.onerror = async () => {
@@ -372,13 +422,14 @@ async function cmd(c, args = {}){
 
 /* ---------------------------------------------------------------- drawing */
 function headerHTML(){
-  const pres = S.mode === "presenter", st = S.st || {};
+  const pres = S.mode === "presenter", hy = S.mode === "hymns", st = S.st || {};
+  const name = MODE_INFO[S.mode] ? MODE_INFO[S.mode].name : "Controller";
   return `<header class="top"><div class="bar1">
       <h1 class="brand">${LOGO}<span><b>BGH</b> Front</span></h1>
-      <button class="mode-chip ${pres ? "is-pres" : ""}" id="modeSwap" type="button" aria-label="${pres ? "Presenter mode. Tap to switch to Controller" : "Controller mode. Tap to switch to Presenter"}">${pres ? "Presenter" : "Controller"}</button>
+      <button class="mode-chip ${pres || hy ? "is-pres" : ""}" id="modeSwap" type="button" aria-label="${name} mode. Tap to change">${name}</button>
       <div class="conn ${live() ? "" : "lost"}" role="status" aria-label="${live() ? "Connected to Device" : "Reconnecting"}">${live() ? `<button class="conn-btn" id="connBtn" type="button" aria-label="Connected to Device">${BLEND}</button>` : `<i class="dot"></i><span>Reconnecting…</span>`}</div>
       ${pres && !physLand() ? `<button class="gear" id="turn" type="button" aria-pressed="${S.turn}" aria-label="${S.turn ? "Turn upright" : "Turn sideways"}">${ic("rotate")}</button>` : ""}
-      ${pres ? "" : `<button class="gear pj-btn${!st.proj && S.nudgeUntil > Date.now() ? " nudge" : ""}${S.pjBounce ? " bounce" : ""}" id="pjBtn" type="button" aria-pressed="${!!st.proj}" aria-label="${st.proj ? "Projecting on the OPTOMA projector. Tap to stop" : "Project Program on the OPTOMA projector"}">${ic("cast")}</button>`}
+      ${pres || hy ? "" : `<button class="gear pj-btn${!st.proj && S.nudgeUntil > Date.now() ? " nudge" : ""}${S.pjBounce ? " bounce" : ""}" id="pjBtn" type="button" aria-pressed="${!!st.proj}" aria-label="${st.proj ? "Projecting on the OPTOMA projector. Tap to stop" : "Project Program on the OPTOMA projector"}">${ic("cast")}</button>`}
     </div></header>
   ${!live() ? `<div class="banner">${ic("wifi")}<div><b>Can't reach the front laptop.</b> Check OBS is open on it and this phone is on the church Wi-Fi. It reconnects by itself.</div></div>` : ""}`;
 }
@@ -388,9 +439,17 @@ function render(){
   if(!S.token){ P.className = "phone"; P.innerHTML = pairHTML(); wirePair(); return; }
   if(!S.mode){ P.className = "phone"; P.innerHTML = modePickHTML(); wireModePick(); return; }
   if(!es) connect();
-  P.className = "phone" + (live() ? "" : " off") + (isLand() ? " land" : "") + (isTurned() ? " turned" : "");
-  P.innerHTML = headerHTML() + (S.mode === "presenter" ? presenterHTML() : controllerHTML())
+  P.className = "phone" + (live() ? "" : " off") + (isLand() ? " land" : "") + (isTurned() ? " turned" : "") + (S.mode === "hymns" ? " hymns" : "");
+  // Redrawing keeps the hymn list where it was scrolled to, and the search box being typed in
+  const sc = $("nbScroll"), keepScroll = sc ? sc.scrollTop : null, typing = document.activeElement && document.activeElement.id === "nbQ";
+  const caret = typing ? document.activeElement.selectionStart : 0;
+  if(S.mode === "hymns" && S.book === "nbh") nbLoad();
+  P.innerHTML = headerHTML() + (S.mode === "presenter" ? presenterHTML() : S.mode === "hymns" ? hymnsHTML() : controllerHTML())
     + (S.sheet ? S.sheet() : "") + `<div class="toast" id="toast" role="status" hidden></div>`;
+  const sc2 = $("nbScroll");
+  if(sc2){ if(NB.restore != null){ sc2.scrollTop = NB.restore; NB.restore = null; } else if(keepScroll != null && NB.view === NB.lastView) sc2.scrollTop = keepScroll; }
+  NB.lastView = NB.view;
+  if(typing && $("nbQ")){ $("nbQ").focus(); try{ $("nbQ").setSelectionRange(caret, caret); }catch(e){} }
   wire();
   if(S.mode === "presenter") preloadSlide();
 }
@@ -474,10 +533,13 @@ function controllerHTML(){
 }
 
 function wire(){
-  $("modeSwap").onclick = () => { setMode(S.mode === "presenter" ? "controller" : "presenter"); toast(S.mode === "presenter" ? "Presenter mode" : "Controller mode"); };
+  $("modeSwap").onclick = () => { S.sheet = modeSheetHTML; render(); };
+  if(S.sheet === modeSheetHTML) wireModeSheet();
   if($("connBtn")) $("connBtn").onclick = () => toast("Connected to Device");
   if($("turn")) $("turn").onclick = () => { S.turn = !S.turn; ls.set("bghFrontTurn", S.turn ? "1" : null); render(); };
-  if(S.mode === "presenter"){
+  if(S.mode === "hymns"){
+    wireHymns();
+  } else if(S.mode === "presenter"){
     const step = async d => {
       S.waiting = true; clearTimeout(S.waitT);
       const pv = $("pvSlide"); if(pv) pv.classList.add("waiting");
@@ -600,22 +662,154 @@ function wireStop(){
   $("stopYes").onclick = async () => { S.sheet = null; render(); const r = await cmd("rec", {on:false}); if(r.ok) toast("Recording saved on the front laptop."); };
 }
 
+/* ---------------------------------------------------------------- Hymns
+   Two hymn books. The Soterio Hymn Collection opens from this laptop at /hymns, where its own Presenter Mode
+   shows verses. The New Believers Hymn Book (data/new-believers.json) lives here in the remote. Either way the
+   verse goes on /hymn-screen in OBS, and showing one switches OBS to the Hymns scene. */
+const NB = {data:null, loading:false, err:"", view:"list", q:"", n:null, vi:{}, used:false, scroll:0, restore:null, lastView:null};
+let hymnLive = null;   // the verse on the screen, from any phone: {key, book, n, i, k, num, label, ...}
+const BOOKS = {
+  soterio:{name:"The Soterio Hymn Collection", text:"Open the hymn book and use its Presenter Mode"},
+  nbh:{name:"The New Believers Hymn Book", text:"700 hymns, shown from this remote"}
+};
+async function nbLoad(){
+  if(NB.data || NB.loading) return;
+  NB.loading = true; NB.err = "";
+  try{ const r = await fetch("/new-believers.json"); if(!r.ok) throw 0; NB.data = await r.json(); }
+  catch(e){ NB.err = "Can't load The New Believers Hymn Book from the front laptop."; }
+  NB.loading = false; render();
+}
+const nbHymn = n => NB.data && NB.data.find(h => h.n === n);
+// A chorus right after verse 1 is sung after every verse, so it goes with each verse. Elsewhere it's its own "C".
+function nbItems(h){
+  const b = h.b, fv = b.findIndex(x => x.k === "v"), ci = b.findIndex(x => x.k === "c");
+  const rep = ci >= 0 && fv >= 0 && (ci === fv + 1 || ci < fv), main = rep ? b[ci].l : null, out = [];
+  b.forEach((x, i) => {
+    if(x.k === "c"){ if(!rep || i < fv) out.push({label:"C", c:true, text:x.l, chorus:null}); return; }
+    const nx = b[i + 1];
+    out.push({label:x.n, c:false, text:x.l, chorus:rep ? (nx && nx.k === "c" ? nx.l : main) : null});
+  });
+  return out;
+}
+const nbSeq = P => { const q = []; P.forEach((it, i) => { q.push([i, "v"]); if(it.chorus) q.push([i, "c"]); }); return q; };
+const nbLiveHere = h => hymnLive && hymnLive.book === "nbh" && hymnLive.n === h.n ? hymnLive : null;
+function nbNext(h, d){
+  const P = nbItems(h), q = nbSeq(P), lk = nbLiveHere(h), vi = NB.vi[h.n] || 0;
+  const at = lk ? q.findIndex(x => x[0] === lk.i && x[1] === lk.k) : q.findIndex(x => x[0] === vi) - (d > 0 ? 1 : 0);
+  return q[at + d] || null;
+}
+const nbName = (P, s) => !s ? "" : s[1] === "c" || P[s[0]].c ? "Chorus" : "Verse " + P[s[0]].label;
+async function nbShow(h, i, k){
+  const it = nbItems(h)[i]; if(!it) return;
+  const ch = k === "c" || it.c, text = k === "c" ? it.chorus : it.text;
+  const show = {key:`nbh:${h.n}:${i}:${k}`, book:"nbh", n:h.n, i, k, num:String(h.n), title:h.t,
+    label:ch ? "Chorus" : "Verse " + it.label, chorus:ch, text};
+  hymnLive = show; NB.vi[h.n] = i; NB.used = true; render();
+  const r = await cmd("hymn", {show});
+  if(!r.ok) render();
+}
+function nbClear(){ if(!hymnLive) return; hymnLive = null; render(); cmd("hymn", {}); }
+// Done with the hymn: clear it, and OBS goes back to the scene from before
+function nbDone(){ if(!NB.used && !hymnLive) return; NB.used = false; hymnLive = null; cmd("hymnback"); }
+const liveLabel = () => !hymnLive ? "" : (hymnLive.book === "nbh" ? "Hymn " : "") + hymnLive.num + " · " + hymnLive.label;
+
+function hymnsHTML(){
+  if(S.book !== "nbh") return `<div class="nb ctl"><h2 class="nb-q">Which hymn book?</h2>
+    <div class="modes">${Object.entries(BOOKS).map(([k, b]) => `<button class="mode-card book" type="button" data-book="${k}">${ic("book")}<b>${b.name}</b><span>${b.text}</span></button>`).join("")}</div>
+    ${hymnLive ? `<div class="nb-st"><i class="dot"></i><span>On screen: ${esc(liveLabel())}</span><button class="nb-clr" id="nbClr" type="button">Clear screen</button></div>` : ""}</div>`;
+  if(!NB.data) return `<div class="nb"><div class="nb-bar"><button class="gear" id="nbBooks" type="button" aria-label="Hymn books">${ic("back")}</button><b class="nb-bk">${BOOKS.nbh.name}</b></div>
+    <div class="pv-empty" style="position:static;flex:1">${NB.err ? esc(NB.err) + `<br><br><button class="btn" id="nbRetry" type="button">Try again</button>` : "Opening the hymn book…"}</div></div>`;
+  return NB.view === "hymn" && nbHymn(NB.n) ? nbHymnHTML(nbHymn(NB.n)) : nbListHTML();
+}
+function nbMatch(){
+  const q = NB.q.trim().toLowerCase();
+  if(!q) return NB.data;
+  if(/^\d+$/.test(q)) return NB.data.filter(h => String(h.n).startsWith(q));
+  const words = q.split(/\s+/);
+  const hay = h => (h._h = h._h || (h.t + " " + (h.words || "") + " " + (h.tune || "") + " " + h.b.map(x => x.l).join(" ")).toLowerCase().replace(/[’']/g, "'"));
+  return NB.data.filter(h => words.every(w => hay(h).includes(w.replace(/[’']/g, "'"))));
+}
+function nbListHTML(){
+  const r = nbMatch(), lv = hymnLive && hymnLive.book === "nbh" ? hymnLive.n : null;
+  return `<div class="nb"><div class="nb-bar"><button class="gear" id="nbBooks" type="button" aria-label="Hymn books">${ic("back")}</button><b class="nb-bk">${BOOKS.nbh.name}</b></div>
+    <input class="txt nb-search" id="nbQ" type="search" inputmode="search" placeholder="Number, title or words" value="${esc(NB.q)}" autocomplete="off" aria-label="Search The New Believers Hymn Book">
+    ${hymnLive ? `<div class="nb-st"><i class="dot"></i><span>On screen: ${esc(liveLabel())}</span><button class="nb-clr" id="nbClr" type="button">Clear screen</button></div>` : ""}
+    <div class="nb-scroll" id="nbScroll">${r.length ? r.slice(0, 700).map(h => `<button class="nb-row${h.n === lv ? " live" : ""}" type="button" data-n="${h.n}"><span class="nb-n">${h.n}</span><span class="nb-t"><b>${esc(h.t)}</b><small>${esc((h.b[0] && h.b[0].l.split("\n")[0]) || "")}</small></span>${h.n === lv ? `<i class="nb-tag">On screen</i>` : ""}</button>`).join("")
+      : `<div class="pv-empty" style="position:static;padding:40px 10px">No hymns match “${esc(NB.q)}”.</div>`}</div></div>`;
+}
+function nbHymnHTML(h){
+  const P = nbItems(h), lk = nbLiveHere(h), i = Math.min(NB.vi[h.n] || 0, P.length - 1), it = P[i] || {text:"", label:"1"};
+  const on = k => lk && lk.i === i && lk.k === k ? " live" : "", nx = nbNext(h, 1), pv = nbNext(h, -1);
+  const meta = [h.words && "Words: " + h.words, h.music && "Music: " + h.music, [h.tune, h.meter].filter(Boolean).join(" · ")].filter(Boolean);
+  const other = hymnLive && !lk;
+  return `<div class="nb hy">
+    <div class="nb-bar"><button class="gear" id="nbList" type="button" aria-label="All hymns">${ic("back")}</button>
+      <div class="nb-ttl"><span class="nb-n">${h.n}</span><b>${esc(h.t)}</b></div></div>
+    ${meta.length ? `<div class="nb-meta">${meta.map(esc).join("<br>")}</div>` : ""}
+    <div class="nb-st${other ? " other" : ""}"><i class="dot${hymnLive ? "" : " idle"}"></i><span>${hymnLive ? "On screen: " + esc(other ? liveLabel() : lk.label) : "Screen shows the QR code"}</span>${hymnLive ? `<button class="nb-clr" id="nbClr" type="button">Clear screen</button>` : ""}</div>
+    <div class="nb-vs ctl" role="group" aria-label="Verses">${P.map((x, j) => `<button class="nb-v${j === i ? " on" : ""}${lk && lk.i === j ? " lv" : ""}" type="button" data-vi="${j}" aria-label="${x.c ? "Chorus" : "Verse " + x.label}">${esc(x.label)}</button>`).join("")}</div>
+    <div class="nb-scroll ctl" id="nbScroll">
+      <button class="nb-blk${it.c ? " ch" : ""}${on("v")}" id="nbV" type="button">${it.c ? "" : `<span class="nb-vn">${esc(it.label)}</span>`}<span>${esc(it.text)}</span></button>
+      ${it.chorus ? `<button class="nb-blk ch${on("c")}" id="nbC" type="button"><span>${esc(it.chorus)}</span></button>` : ""}
+    </div>
+    <div class="pres-nav nb-nav ctl">
+      <button class="btn" id="nbBack" type="button" aria-label="Back: ${esc(nbName(P, pv) || "start of the hymn")}" ${pv ? "" : "disabled"}>${ic("back")}</button>
+      <button class="btn primary" id="nbNext" type="button" ${nx ? "" : "disabled"}><span>${nx ? (lk ? "Next" : "Show") : "End of hymn"}</span>${nx ? `<small>${esc(nbName(P, nx))}</small>` : ""}${ic("fwd")}</button>
+    </div></div>`;
+}
+function wireHymns(){
+  document.querySelectorAll("[data-book]").forEach(b => b.onclick = () => {
+    if(b.dataset.book === "soterio"){ location.href = "/hymns"; return; }
+    S.book = "nbh"; ls.set("bghFrontBook", "nbh"); NB.view = "list"; nbLoad(); render();
+  });
+  if($("nbClr")) $("nbClr").onclick = nbClear;
+  if($("nbRetry")) $("nbRetry").onclick = () => { NB.err = ""; nbLoad(); render(); };
+  if($("nbBooks")) $("nbBooks").onclick = () => { nbDone(); S.book = null; ls.set("bghFrontBook", null); render(); };
+  const q = $("nbQ");
+  if(q) q.oninput = () => { NB.q = q.value; const p = q.selectionStart; NB.scroll = 0; NB.restore = 0; render(); const n = $("nbQ"); n.focus(); try{ n.setSelectionRange(p, p); }catch(e){} };
+  document.querySelectorAll("[data-n]").forEach(b => b.onclick = () => { NB.scroll = $("nbScroll").scrollTop; NB.view = "hymn"; NB.n = +b.dataset.n; if(NB.vi[NB.n] == null) NB.vi[NB.n] = 0; render(); });
+  const h = S.book === "nbh" && NB.view === "hymn" && $("nbList") && nbHymn(NB.n);
+  if(!h) return;
+  $("nbList").onclick = () => { nbDone(); NB.view = "list"; NB.restore = NB.scroll; render(); };
+  document.querySelectorAll("[data-vi]").forEach(b => b.onclick = () => nbShow(h, +b.dataset.vi, "v"));
+  $("nbV").onclick = () => nbShow(h, NB.vi[h.n] || 0, "v");
+  if($("nbC")) $("nbC").onclick = () => nbShow(h, NB.vi[h.n] || 0, "c");
+  const step = d => { const s = nbNext(h, d); if(s) nbShow(h, s[0], s[1]); };
+  $("nbNext").onclick = () => step(1);
+  $("nbBack").onclick = () => step(-1);
+}
+
+/* The label at the top: which way this phone is used */
+function modeSheetHTML(){
+  return `<div class="scrim" id="scrim"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="mdH">
+    <h3 id="mdH">Use this phone for</h3>
+    <div class="modes">${Object.entries(MODE_INFO).map(([k, m]) => `<button class="mode-card" type="button" data-mode="${k}" aria-pressed="${S.mode === k}">${ic(m.icon)}<b>${m.name}</b><span>${m.text}</span></button>`).join("")}</div>
+  </div></div>`;
+}
+function wireModeSheet(){
+  $("scrim").onclick = e => { if(e.target.id === "scrim"){ S.sheet = null; render(); } };
+  document.querySelectorAll("#scrim [data-mode]").forEach(b => b.onclick = () => { const m = b.dataset.mode; S.sheet = null; if(m !== S.mode){ setMode(m); toast(MODE_INFO[m].name + " mode"); } else render(); });
+}
+
 /* After pairing, each phone says how it will be used */
 const MODE_INFO = {
   presenter:{icon:"slides", name:"Presenter", text:"Manage Slideshow"},
-  controller:{icon:"ctrl", name:"Controller", text:"Manage Live Translator, Baptism Cam"}
+  controller:{icon:"ctrl", name:"Controller", text:"Manage Live Translator, Baptism Cam"},
+  hymns:{icon:"book", name:"Hymns", text:"Show hymn verses on the projector"}
 };
 function modePickHTML(){
   return `<div class="pair">
     <h1 class="brand">${LOGO}<span><b>BGH</b> Front</span></h1>
     <h2>How will you use this phone?</h2>
-    <div class="modes">${Object.entries(MODE_INFO).map(([k, m]) => `<button class="mode-card" type="button" data-mode="${k}">${ic(m.icon)}<b>${m.name}</b><span>${m.text}</span></button>`).join("")}<a class="mode-card" href="/hymns">${ic("book")}<b>Hymns</b><span>Show hymn verses on the projector</span></a></div>
+    <div class="modes">${Object.entries(MODE_INFO).map(([k, m]) => `<button class="mode-card" type="button" data-mode="${k}">${ic(m.icon)}<b>${m.name}</b><span>${m.text}</span></button>`).join("")}</div>
   </div><div class="toast" id="toast" role="status" hidden></div>`;
 }
 function wireModePick(){
   document.querySelectorAll("[data-mode]").forEach(b => b.onclick = () => setMode(b.dataset.mode));
 }
 function setMode(m){
+  if(S.mode === "hymns" && m !== "hymns") nbDone();
+  if(m === "hymns"){ S.book = null; ls.set("bghFrontBook", null); }
   S.mode = m; ls.set("bghFrontMode", m); S.sheet = null; S.armed = null; S.trOpen = false;
   if(es && es.readyState !== 2) cmd("mode", {mode:m}); else connect();
   render();
