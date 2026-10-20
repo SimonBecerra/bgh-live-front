@@ -209,6 +209,7 @@ button.mode-chip:active{transform:scale(.97)}
 .mode-card span{font-size:15px;color:var(--muted);line-height:1.4}
 .pair .mode-card{min-height:140px;padding:20px 22px;gap:2px 18px;border-radius:20px;align-content:center}
 .pair .modes{gap:16px}
+.mode-card{box-sizing:border-box;color:inherit;text-decoration:none}
 .mode-card[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
 .seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border:1px solid var(--line-2);border-radius:12px;background:var(--bg)}
 .seg button{min-height:44px;border:0;border-radius:9px;background:transparent;font-weight:600}
@@ -287,6 +288,7 @@ const ICON = {
   video:'<path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"/><rect x="2" y="6" width="14" height="12" rx="2"/>',
   hourglass:'<path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22"/><path d="M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2"/>',
   slides:'<rect width="20" height="14" x="2" y="3" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/>',
+  book:'<path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/>',
   flag:'<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/>',
   wifi:'<path d="M12 20h.01"/><path d="M8.5 16.43a5 5 0 0 1 7 0"/><path d="M5 12.86a10 10 0 0 1 5.17-2.69"/><path d="M19 12.86a10 10 0 0 0-2-1.39"/><path d="M2 8.82a15 15 0 0 1 4.18-2.65"/><path d="M22 8.82a15 15 0 0 0-11.29-3.76"/><line x1="2" x2="22" y1="2" y2="22"/>',
   x:'<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
@@ -312,6 +314,8 @@ const ic = n => `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${ICON[n]
 const fmt = ms => { const s = Math.max(0, Math.floor(ms / 1000)); return [Math.floor(s / 3600), Math.floor(s / 60) % 60, s % 60].map(n => String(n).padStart(2, "0")).join(":"); };
 const ls = {get(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }, set(k, v){ try{ v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); }catch(e){} }};
 
+// Sent here from the hymn book to pair: go back to it afterwards
+const nextPage = new URLSearchParams(location.search).get("next");
 const S = {
   token:ls.get("bghFrontToken") || "", mode:ls.get("bghFrontMode"), turn:ls.get("bghFrontTurn") === "1",
   st:null, connected:false, offset:0, note:"", sheet:null, armed:null, armT:null, trOpen:false,
@@ -605,7 +609,7 @@ function modePickHTML(){
   return `<div class="pair">
     <h1 class="brand">${LOGO}<span><b>BGH</b> Front</span></h1>
     <h2>How will you use this phone?</h2>
-    <div class="modes">${Object.entries(MODE_INFO).map(([k, m]) => `<button class="mode-card" type="button" data-mode="${k}">${ic(m.icon)}<b>${m.name}</b><span>${m.text}</span></button>`).join("")}</div>
+    <div class="modes">${Object.entries(MODE_INFO).map(([k, m]) => `<button class="mode-card" type="button" data-mode="${k}">${ic(m.icon)}<b>${m.name}</b><span>${m.text}</span></button>`).join("")}<a class="mode-card" href="/hymns">${ic("book")}<b>Hymns</b><span>Show hymn verses on the projector</span></a></div>
   </div><div class="toast" id="toast" role="status" hidden></div>`;
 }
 function wireModePick(){
@@ -635,7 +639,7 @@ async function tryPair(body){
   try{ const r = await fetch("/api/pair", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)}); j = await r.json(); }
   catch(e){ S.busy = false; if($("pairErr")) $("pairErr").textContent = "Can't reach the front laptop. Check this phone is on the church Wi-Fi and OBS is open."; return; }
   S.busy = false;
-  if(j.token){ S.token = j.token; S.note = ""; ls.set("bghFrontToken", j.token); history.replaceState(null, "", "/"); render(); toast("Paired with the front laptop."); return; }
+  if(j.token){ S.token = j.token; S.note = ""; ls.set("bghFrontToken", j.token); if(nextPage === "hymns") return location.replace("/hymns"); history.replaceState(null, "", "/"); render(); toast("Paired with the front laptop."); return; }
   const msg = j.code === "LOCKED" ? `Too many wrong codes. Try again in ${Math.ceil((j.wait || 300) / 60)} minutes.`
     : body.key ? "That QR code has already been used. Scan the new one in OBS, or type the code."
     : "That code didn't match. Check the code in OBS and try again.";
@@ -668,7 +672,8 @@ setInterval(() => { const t = $("recT"); if(t && S.st && S.st.rec) t.textContent
 
 // Opened from the QR code in OBS: pair straight away
 const qrKey = new URLSearchParams(location.search).get("k");
-if(qrKey && !S.token){ render(); tryPair({key:qrKey}); }
+if(nextPage === "hymns" && S.token) location.replace("/hymns");   // already paired: back to the hymn book
+else if(qrKey && !S.token){ render(); tryPair({key:qrKey}); }
 else { if(qrKey) history.replaceState(null, "", "/"); render(); }
 </script>
 </body>

@@ -13,6 +13,10 @@ the Free Software Foundation; either version 2 of the License, or
 //   GET  /api/events       live updates (server-sent events): hello, state, unpaired
 //   POST /api/cmd          {cmd, args} with "Authorization: Bearer <token>"
 //   GET  /api/img          the current or next slide, as a PNG
+//   GET  /hymns            the Soterio hymn book, opened from here so its Presenter Mode can reach OBS (data/hymns.html)
+//   GET  /hymn-screen      the hymn verse on the projector, for an OBS Browser Source (data/hymn-screen.html)
+//   GET  /api/hymn-events  live updates for /hymn-screen (server-sent events): hymn. Needs no pairing: it only sends
+//                          the words on the screen
 // Each request gets its own short-lived thread. Live-update connections are kept in a list and written to by
 // one sender thread, which also sends a keep-alive every 15 seconds.
 
@@ -60,7 +64,7 @@ namespace {
 
 struct Client {
 	SOCKET s = INVALID_SOCKET;
-	std::string phone, mode;
+	std::string phone, mode; // mode "screen": a /hymn-screen page, which only gets hymn events
 };
 
 struct Message {
@@ -76,7 +80,16 @@ std::vector<std::shared_ptr<Client>> g_clients;
 std::mutex g_qm;
 std::condition_variable g_qcv;
 std::deque<Message> g_queue;
-std::string g_html;
+std::string g_html, g_hymnsHtml, g_screenHtml;
+// The hymn verse on the screen, as the JSON a phone sent ({} when the screen is clear)
+std::mutex g_hm;
+std::string g_hymn = "{}";
+
+std::string currentHymn()
+{
+	std::lock_guard<std::mutex> lock(g_hm);
+	return g_hymn;
+}
 
 const char *kIcon =
 	"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"412 0 1096 1920\"><rect x=\"412\" y=\"0\" width=\"1096\" "
@@ -328,6 +341,24 @@ void handleCommand(SOCKET s, const Request &r, const std::string &phone)
 		err = slidesStep(0);
 		std::this_thread::sleep_for(std::chrono::milliseconds(300));
 		runOnUi([]() { slidesCapture(true); refreshState(); }, 1500);
+	} else if (cmd == "hymn") {
+		// Shows a hymn verse on /hymn-screen: args {show:{key, num, label, text, chorus, ...}}, or {} to clear it
+		std::string json = "{}";
+		obs_data_t *show = obs_data_get_obj(args, "show");
+		if (show) {
+			const char *j = obs_data_get_json(show);
+			if (j && obs_data_get_string(show, "key")[0])
+				json = j;
+			obs_data_release(show);
+		}
+		// One line, as server-sent events need. Newlines inside the words are already written as \n.
+		json.erase(std::remove_if(json.begin(), json.end(), [](char c) { return c == '\n' || c == '\r'; }),
+			   json.end());
+		{
+			std::lock_guard<std::mutex> lock(g_hm);
+			g_hymn = json;
+		}
+		serverBroadcast("hymn", json);
 	} else if (cmd == "slide") {
 		const int delta = (int)obs_data_get_int(args, "d");
 		err = slidesStep(delta < 0 ? -1 : 1);
@@ -381,6 +412,7 @@ void handleEvents(SOCKET s, const std::string &phone, const std::string &mode)
 	const std::string st = stateJson();
 	if (!st.empty())
 		head += "event: state\ndata: " + st + "\n\n";
+	head += "event: hymn\ndata: " + currentHymn() + "\n\n";
 	if (!sendStr(s, head)) {
 		closesocket(s);
 		return;
@@ -396,6 +428,26 @@ void handleEvents(SOCKET s, const std::string &phone, const std::string &mode)
 	g_clients.push_back(c);
 }
 
+// A /hymn-screen page: keeps the connection open for hymn events only
+void handleScreenEvents(SOCKET s)
+{
+	setTimeouts(s, 5000);
+	std::string head =
+		"HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nCache-Control: no-store\r\nConnection: keep-alive\r\n"
+		"X-Accel-Buffering: no\r\n\r\n";
+	head += "retry: 2000\n\n";
+	head += "event: hymn\ndata: " + currentHymn() + "\n\n";
+	if (!sendStr(s, head)) {
+		closesocket(s);
+		return;
+	}
+	auto c = std::make_shared<Client>();
+	c->s = s;
+	c->mode = "screen";
+	std::lock_guard<std::mutex> lock(g_cm);
+	g_clients.push_back(c);
+}
+
 void handle(SOCKET s)
 {
 	setTimeouts(s, 10000);
@@ -406,6 +458,14 @@ void handle(SOCKET s)
 	}
 	if (r.method == "GET" && (r.path == "/" || r.path == "/index.html")) {
 		respond(s, 200, "text/html; charset=utf-8", g_html.empty() ? "BGH LIVE Front: phone.html is missing." : g_html);
+	} else if (r.method == "GET" && (r.path == "/hymns" || r.path == "/hymns/")) {
+		respond(s, 200, "text/html; charset=utf-8",
+			g_hymnsHtml.empty() ? "BGH LIVE Front: hymns.html is missing." : g_hymnsHtml);
+	} else if (r.method == "GET" && r.path == "/hymn-screen") {
+		respond(s, 200, "text/html; charset=utf-8",
+			g_screenHtml.empty() ? "BGH LIVE Front: hymn-screen.html is missing." : g_screenHtml);
+	} else if (r.method == "GET" && r.path == "/api/hymn-events") {
+		return handleScreenEvents(s); // keeps the socket
 	} else if (r.method == "GET" && r.path == "/icon.svg") {
 		respond(s, 200, "image/svg+xml", kIcon);
 	} else if (r.method == "GET" && g_icons.count(r.path)) {
@@ -462,7 +522,8 @@ void acceptLoop()
 void dropClient(const std::shared_ptr<Client> &c)
 {
 	closesocket(c->s);
-	phoneConnected(c->phone, false);
+	if (!c->phone.empty())
+		phoneConnected(c->phone, false);
 }
 
 void senderLoop()
@@ -494,6 +555,8 @@ void senderLoop()
 			std::string out;
 			for (auto &m : batch) {
 				if (!m.phone.empty() && m.phone != c->phone)
+					continue;
+				if (c->mode == "screen" && m.event != "hymn")
 					continue;
 				out += "event: " + m.event + "\ndata: " + m.data + "\n\n";
 				if (m.close)
@@ -563,6 +626,8 @@ bool serverStart()
 	if (g_run)
 		return true;
 	g_html = loadHtml();
+	g_hymnsHtml = loadFile("hymns.html");
+	g_screenHtml = loadFile("hymn-screen.html");
 	loadIcons();
 #ifdef _WIN32
 	WSADATA wsa;

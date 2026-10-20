@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Hymn verses</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Arimo:ital,wght@0,400;1,400&family=EB+Garamond&display=swap">
+<style>
+/* BGH LIVE Front: the hymn verse on the projector. Add it in OBS as a Browser Source:
+     http://127.0.0.1:8650/hymn-screen            white text on black, sized 1920 x 1080
+     http://127.0.0.1:8650/hymn-screen?bg=none    no background, to put the words over a camera
+   Phones in the hymn book's Presenter Mode choose what's shown. */
+html,body{margin:0;height:100%;overflow:hidden}
+body{background:#000;color:#fff;cursor:none}
+body.clear{background:transparent}
+.layer{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;opacity:0;transition:opacity .7s ease}
+.layer.on{opacity:1}
+.num{flex:none;margin-top:9.5vh;font:400 4.6vh/1 "EB Garamond",Georgia,serif;letter-spacing:.02em}
+.box{flex:1;display:flex;align-items:center;justify-content:center;width:100%;min-height:0;padding:0 7vw 8vh;box-sizing:border-box}
+.txt{font-family:Arimo,Arial,"Helvetica Neue",Helvetica,sans-serif;text-align:center;line-height:1.3;white-space:pre-line}
+.chorus .txt{font-style:italic}
+body.clear .txt,body.clear .num{text-shadow:0 2px 8px rgba(0,0,0,.85),0 0 2px rgba(0,0,0,.9)}
+</style>
+</head>
+<body>
+<script>
+"use strict";
+if(new URLSearchParams(location.search).get("bg") === "none") document.body.classList.add("clear");
+let shown = null, front = null;
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+// The biggest text size (up to 6.4% of the screen height) that fits the screen
+function fit(layer){
+  const box = layer.querySelector(".box"), txt = layer.querySelector(".txt");
+  if(!txt) return;
+  let hi = innerHeight * .064, lo = innerHeight * .02;
+  txt.style.fontSize = hi + "px";
+  const fits = () => txt.scrollWidth <= box.clientWidth - 1 && txt.offsetHeight <= box.clientHeight * .98;
+  if(fits()) return;
+  for(let k = 0; k < 14; k++){
+    const mid = (hi + lo) / 2;
+    txt.style.fontSize = mid + "px";
+    if(fits()) lo = mid; else hi = mid;
+  }
+  txt.style.fontSize = lo + "px";
+}
+
+// Dissolves to the new verse (or to nothing)
+function show(d){
+  const key = d && d.key ? d.key + "|" + d.text : null;
+  if(key === shown) return;
+  shown = key;
+  const old = front;
+  front = null;
+  if(key){
+    const el = document.createElement("div");
+    el.className = "layer" + (d.chorus ? " chorus" : "");
+    el.innerHTML = `<div class="num">${esc(d.num)}</div><div class="box"><div class="txt">${esc(d.text)}</div></div>`;
+    document.body.appendChild(el);
+    fit(el);
+    requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add("on")));
+    front = el;
+  }
+  if(old){
+    old.classList.remove("on");
+    setTimeout(() => old.remove(), 800);
+  }
+}
+
+addEventListener("resize", () => { if(front) fit(front); });
+if(document.fonts) document.fonts.ready.then(() => { if(front) fit(front); });
+
+function connect(){
+  const es = new EventSource("/api/hymn-events");
+  es.addEventListener("hymn", e => { let d = null; try{ d = JSON.parse(e.data); }catch(x){} show(d); });
+  es.onerror = () => { if(es.readyState === 2){ es.close(); setTimeout(connect, 2000); } };   // otherwise the browser retries by itself
+}
+connect();
+</script>
+</body>
+</html>

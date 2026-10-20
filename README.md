@@ -48,6 +48,15 @@ The code changes after each phone pairs, and five wrong codes pause pairing for 
   **OBS Projector** covers everything; **Presentation** keeps whatever is on the projector in front of OBS.
 - **Scenes.** Only the five scenes above appear on the phone; other scenes in OBS are ignored. Each needs two taps.
   They're listed in `allowedScenes()` in `src/state.cpp`.
+- **Hymns.** A phone can show hymn verses on the projector with the Soterio hymn book's **Presenter Mode**. Open
+  the hymn book from the laptop, at the remote's address followed by `/hymns` (like `http://192.168.1.20:8650/hymns`),
+  or choose **Hymns** on the remote. It downloads the newest hymn book from
+  https://barringtongospelhall.github.io/soterio/ and keeps a copy on the phone for when there's no internet. In its
+  Settings, turn on **Presenter Mode**, then open a hymn and tap a verse number: the verse fades in on the screen. Tap
+  the chorus to show the chorus, and **Clear screen** to fade it out. Going back to the list of hymns clears it too.
+  In OBS, add a **Browser Source** with the URL `http://127.0.0.1:8650/hymn-screen`, 1920 × 1080, to the scene the
+  verses go on. It's white words on black; `http://127.0.0.1:8650/hymn-screen?bg=none` has no background, to put
+  the words over a camera.
 - **Network.** The installer allows TCP port 8650 through Windows Firewall. Only phones on the same network can reach it.
 
 ## Where things are on the laptop
