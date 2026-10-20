@@ -52,11 +52,11 @@ const BOOK = Q.get("book"), QR = Q.get("qr") === "1" || (Q.get("qr") !== "0" && 
 let shown = null, front = null, numShown = null, numFront = null;
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 
-// The biggest text size (up to 6.4% of the screen height) that fits the screen
+// The biggest text size (up to 4.9% of the screen height, 53px at 1080) that fits the screen
 function fit(layer){
   const box = layer.querySelector(".box"), txt = layer.querySelector(".txt");
   if(!txt) return;
-  let hi = innerHeight * .064, lo = innerHeight * .02;
+  let hi = innerHeight * .049, lo = innerHeight * .02;
   txt.style.fontSize = hi + "px";
   const fits = () => txt.scrollWidth <= box.clientWidth - 1 && txt.offsetHeight <= box.clientHeight * .98;
   if(fits()) return;
