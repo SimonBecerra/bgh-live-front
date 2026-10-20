@@ -33,6 +33,19 @@ Compression=lzma2
 SolidCompression=yes
 CloseApplications=no
 
+[Tasks]
+Name: "startobs"; Description: "Open OBS when Windows starts (for everyone who signs in to this laptop)"; Check: ObsInstalled
+
+[Icons]
+; A shortcut in Windows' Startup folder. It starts OBS from its own folder, which OBS needs to find its files.
+; --disable-shutdown-check: if the laptop was switched off without closing OBS, OBS opens normally instead of
+; stopping to ask about Safe Mode, so nobody has to be at the laptop.
+Name: "{commonstartup}\OBS Studio"; Filename: "{code:ObsDir}\bin\64bit\obs64.exe"; WorkingDir: "{code:ObsDir}\bin\64bit"; Parameters: "--disable-shutdown-check"; Comment: "Opens OBS, and with it the BGH LIVE Front phone remote"; Tasks: startobs
+
+[InstallDelete]
+; Unticked when installing again: take the Startup shortcut away
+Type: files; Name: "{commonstartup}\OBS Studio.lnk"; Tasks: not startobs
+
 [Files]
 Source: "..\release\RelWithDebInfo\bgh-live-front\*"; DestDir: "{app}"; Excludes: "*.pdb"; Flags: recursesubdirs createallsubdirs ignoreversion
 Source: "icon.ico"; DestDir: "{app}"; Flags: ignoreversion
@@ -50,6 +63,18 @@ FinishedHeadingLabel=BGH LIVE Front is installed
 FinishedLabel=Open OBS. The BGH LIVE Front panel shows a QR code: scan it with a phone on the church Wi-Fi.%n%nIf you don't see the panel, open Tools > BGH LIVE Front in OBS.
 
 [Code]
+// Where OBS is installed: OBS's installer records it in the registry
+function ObsDir(Param: String): String;
+begin
+  if not RegQueryStringValue(HKLM64, 'SOFTWARE\OBS Studio', '', Result) or (Result = '') then
+    Result := ExpandConstant('{commonpf64}\obs-studio');
+end;
+
+function ObsInstalled(): Boolean;
+begin
+  Result := FileExists(ObsDir('') + '\bin\64bit\obs64.exe');
+end;
+
 function ObsRunning(): Boolean;
 var
   Code: Integer;

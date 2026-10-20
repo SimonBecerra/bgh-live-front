@@ -17,6 +17,7 @@ once installed, OBS runs a small web page that phones on the church Wi-Fi open.
 1. Close OBS on the front laptop.
 2. Run **BGH-LIVE-Front-Setup.exe**. Windows may say it protected your PC, because the installer isn't signed
    with a paid certificate: click **More info**, then **Run anyway**. Choose **Yes** when Windows asks for permission.
+   Leave **Open OBS when Windows starts** ticked to have OBS (and the phone remote) open by itself after sign-in.
 3. Open OBS. A **BGH LIVE Front** panel appears with a QR code. If it doesn't, open **Tools → BGH LIVE Front**.
    Place the panel where you like; OBS remembers it.
 
