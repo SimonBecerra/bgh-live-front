@@ -22,6 +22,7 @@ the Free Software Foundation; either version 2 of the License, or
 #include <QTimer>
 #include <QWidget>
 
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <future>
@@ -276,6 +277,8 @@ bool isProjecting()
 }
 
 /* ------------------------------------------------------------------ actions */
+static std::string goToScene(const std::string &name);
+
 std::string switchScene(const std::string &name)
 {
 	bool allowed = false;
@@ -284,6 +287,90 @@ std::string switchScene(const std::string &name)
 			allowed = true;
 	if (!allowed)
 		return "That scene isn't one the remote can switch to.";
+	return goToScene(name);
+}
+
+static std::string programScene()
+{
+	std::string name;
+	if (obs_source_t *cur = obs_frontend_get_current_scene()) {
+		name = obs_source_get_name(cur);
+		obs_source_release(cur);
+	}
+	return name;
+}
+
+static bool sceneExists(const char *name)
+{
+	obs_source_t *src = obs_get_source_by_name(name);
+	const bool ok = src && obs_source_is_scene(src);
+	obs_source_release(src);
+	return ok;
+}
+
+const char *hymnScene(const std::string &book)
+{
+	return book == "nbh" ? kNbhScene : kSoterioScene;
+}
+
+static bool isHymnScene(const std::string &name)
+{
+	return name == kNbhScene || name == kSoterioScene;
+}
+
+bool hymnSceneExists(const std::string &book)
+{
+	return sceneExists(hymnScene(book));
+}
+
+// What OBS showed before the hymn book, to go back to afterwards ("" when no hymn book scene was switched to)
+static std::string g_hymnPrev, g_hymnPrevTop;
+
+std::string hymnSceneShow(const std::string &book, bool required)
+{
+	const char *scene = hymnScene(book);
+	if (!sceneExists(scene))
+		return required ? "There's no scene called \"" + std::string(scene) + "\" in OBS. Add it with a Browser Source of http://127.0.0.1:" + std::to_string(kPort) + "/hymn-screen?book=" + (book == "nbh" ? "nbh" : "soterio") + "."
+				: ""; // a verse without its scene: the words still change, OBS stays as it is
+	const std::string program = programScene();
+	std::string err;
+	if (program != scene) {
+		if (!isHymnScene(program)) { // coming from another scene, not from the other hymn book
+			g_hymnPrev = program;
+			g_hymnPrevTop = onTop();
+		}
+		err = goToScene(scene);
+		obs_log(LOG_INFO, "hymn verses: switched to %s from %s", scene, program.c_str());
+	}
+	if (err.empty() && !isProjecting())
+		err = setProjecting(true);
+	if (onTop() != "obs") {
+		if (g_hymnPrevTop.empty())
+			g_hymnPrevTop = onTop();
+		setOnTop("obs"); // OBS's projector in front of a slideshow, so the verses show
+		applyOnTop();
+	}
+	return err;
+}
+
+std::string hymnSceneBack()
+{
+	std::string err;
+	if (!g_hymnPrev.empty() && isHymnScene(programScene())) // unless someone has switched scenes since
+		err = goToScene(g_hymnPrev);
+	if (!g_hymnPrevTop.empty() && g_hymnPrevTop != onTop()) {
+		setOnTop(g_hymnPrevTop);
+		applyOnTop();
+	}
+	if (!g_hymnPrev.empty())
+		obs_log(LOG_INFO, "hymn verses: back to %s", g_hymnPrev.c_str());
+	g_hymnPrev.clear();
+	g_hymnPrevTop.clear();
+	return err;
+}
+
+static std::string goToScene(const std::string &name)
+{
 	obs_source_t *src = obs_get_source_by_name(name.c_str());
 	if (!src || !obs_source_is_scene(src)) {
 		obs_source_release(src);
@@ -602,7 +689,11 @@ void refreshState()
 			   ",\"recT0\":" + std::to_string(g_recStart) + ",\"proj\":" + (projecting ? "true" : "false") +
 			   ",\"pjFound\":" + (pj ? "true" : "false") + ",\"onTop\":\"" + onTop() + "\"" +
 			   ",\"presFront\":" + (presentationInFront() || !projecting ? "true" : "false") + ",\"pjName\":\"" + jsonEscape(projectorLabel()) +
-			   "\"" + ",\"slides\":" + slidesJson() + ",\"cam\":" + camJson() + "}";
+			   "\"" + ",\"slides\":" + slidesJson() + ",\"cam\":" + camJson() + ",\"hymnScenes\":{\"nbh\":" +
+			   (std::find(present.begin(), present.end(), std::string(kNbhScene)) != present.end() ? "true" : "false") +
+			   ",\"soterio\":" +
+			   (std::find(present.begin(), present.end(), std::string(kSoterioScene)) != present.end() ? "true" : "false") + "}" +
+			   ",\"hymnPrev\":\"" + jsonEscape(g_hymnPrev) + "\"}";
 
 	bool changed = false;
 	{

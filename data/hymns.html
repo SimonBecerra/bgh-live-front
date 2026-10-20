@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1c1816">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Soterio">
+<title>The Soterio Hymn Collection</title>
+<style>
+html,body{height:100%;margin:0}
+body{background:#1c1816;color:#f0e8dc;font:16px/1.45 -apple-system,"Segoe UI",system-ui,sans-serif;display:grid;place-items:center;text-align:center;padding:0 24px;box-sizing:border-box}
+p{max-width:340px;margin:0 auto}
+button{margin-top:16px;padding:10px 18px;border-radius:10px;border:1px solid #5cc6d8;background:none;color:#5cc6d8;font:inherit}
+</style>
+</head>
+<body>
+<div><p id="msg">Opening the hymn book…</p></div>
+<script>
+"use strict";
+/* BGH LIVE Front: opens The Soterio Hymn Collection from the front laptop, so its Presenter Mode can talk to OBS.
+   The hymn book lives on GitHub Pages (HTTPS). Phones won't let an HTTPS page reach this laptop's plain HTTP
+   address, so this page downloads the hymn book and opens it here instead. A copy is kept on the phone for
+   when the church Wi-Fi has no internet. */
+const SRC = "https://barringtongospelhall.github.io/soterio/";
+const FLAG = "<script>window.SOTERIO_OBS={v:1}<\/script>";
+
+function db(){
+  return new Promise((res, rej) => {
+    const q = indexedDB.open("soterio-obs", 1);
+    q.onupgradeneeded = () => q.result.createObjectStore("kv");
+    q.onsuccess = () => res(q.result);
+    q.onerror = () => rej(q.error);
+  });
+}
+async function cacheGet(){
+  try{
+    const d = await db();
+    return await new Promise(res => { const r = d.transaction("kv").objectStore("kv").get("html"); r.onsuccess = () => res(r.result || null); r.onerror = () => res(null); });
+  }catch(e){ return null; }
+}
+async function cachePut(html){
+  try{ const d = await db(); d.transaction("kv", "readwrite").objectStore("kv").put(html, "html"); }catch(e){}
+}
+async function download(){
+  const ctl = typeof AbortController === "function" ? new AbortController() : null;
+  const t = setTimeout(() => ctl && ctl.abort(), 8000);
+  try{
+    const r = await fetch(SRC + "?t=" + Date.now(), {cache:"no-store", signal:ctl ? ctl.signal : undefined});
+    if(!r.ok) return null;
+    const html = await r.text();
+    return html.includes("const HYMNS=") ? html : null;
+  }catch(e){ return null; }
+  finally{ clearTimeout(t); }
+}
+async function open(){
+  let html = await download();
+  if(html) cachePut(html);
+  else html = await cacheGet();
+  if(!html){
+    document.getElementById("msg").innerHTML = "Can't download the hymn book. Check this phone is on the church Wi-Fi and the Wi-Fi has internet. After it opens once, it also works without internet.<br><button onclick=\"location.reload()\">Try again</button>";
+    return;
+  }
+  html = /<head[^>]*>/i.test(html) ? html.replace(/<head[^>]*>/i, m => m + FLAG) : FLAG + html;
+  document.open();
+  document.write(html);
+  document.close();
+}
+open();
+</script>
+</body>
+</html>

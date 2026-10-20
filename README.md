@@ -26,7 +26,7 @@ once installed, OBS runs a small web page that phones on the church Wi-Fi open.
 1. Put the phone on the church Wi-Fi (the same network as the laptop).
 2. Point its camera at the QR code in the BGH LIVE Front panel. It opens the remote and pairs straight away.
    Or open the address shown in the panel (like `http://192.168.1.20:8650`) and type the 3-digit code.
-3. Choose **Presenter** or **Controller**. Tap the label at the top to switch later.
+3. Choose **Presenter** or **Controller**. Tap the label at the top to choose again later.
 4. Optional: in Safari, Share → **Add to Home Screen**, so it opens like an app.
 
 A paired phone stays paired. Remove one in the panel's **Paired phones** list and it stops working straight away.
@@ -49,6 +49,30 @@ The code changes after each phone pairs, and five wrong codes pause pairing for 
   **OBS Projector** covers everything; **Presentation** keeps whatever is on the projector in front of OBS.
 - **Scenes.** Only the five scenes above appear on the phone; other scenes in OBS are ignored. Each needs two taps.
   They're listed in `allowedScenes()` in `src/state.cpp`.
+- **Hymn Sing.** Choose **Hymn Sing** on the remote (tap the mode label at the top to choose another mode), then a hymn
+  book. Choosing one switches OBS to that hymn book's scene and starts projecting, if OBS isn't already. Going back
+  to the hymn books, or to another mode, switches OBS back to the scene from before.
+  - **The New Believers Hymn Book** works right in the remote: search by number, title or words, open a hymn, and
+    press **Show** or a verse number. **Next** goes verse, chorus, verse. The search at the top of a hymn finds another
+    hymn without taking the verse off the screen; the two open hymns show as tabs, the one on the screen in yellow. **Clear screen**, or going back to the
+    list, fades the words out. Its 700 hymns are in `data/new-believers.json`; after changing the text file, run
+    `python3 tools/new-believers-to-json.py "The New Believers Hymn Book.txt"` to rebuild it.
+  - **The Soterio Hymn Collection** shows a 3-digit PIN (this laptop's pairing code) and the laptop's address. On the
+    phone with the Soterio hymn book (https://barringtongospelhall.github.io/soterio/), open Settings → Presenter
+    Mode → Set up and type the PIN; the first time, it also asks for the laptop's address, then remembers it. The
+    hymn book on the internet can't reach the laptop by itself, so the phone opens the hymn book from the laptop
+    (`http://<laptop>:8650/hymns`), pairs, and turns Presenter Mode on. A phone that has connected before can
+    reconnect without a PIN. Tap a verse to show it. Giving the laptop a fixed address on the church router keeps
+    the remembered address working.
+  - In OBS, make two scenes, each with a **Browser Source** (1920 × 1080):
+    **The New Believers Hymn Book** with `http://127.0.0.1:8650/hymn-screen?book=nbh`, and
+    **The Soterio Hymn Collection** with `http://127.0.0.1:8650/hymn-screen?book=soterio`. Each shows only its own
+    hymn book's verses. Between verses the Soterio scene shows a QR code that opens the Soterio hymn book on
+    people's phones, so they can follow along, and the New Believers scene is black. The New Believers words
+    are in Montserrat, built into the screen page (licence in `data/fonts/Montserrat-OFL.txt`), so it shows
+    without internet. Add `&bg=none` for no
+    background (to put the words over a camera); `&qr=0` or `&qr=1` turns the QR code off or on.
+    The panel's **Hymn verses** section says whether both scenes are there.
 - **Network.** The installer allows TCP port 8650 through Windows Firewall. Only phones on the same network can reach it.
 
 ## Where things are on the laptop
