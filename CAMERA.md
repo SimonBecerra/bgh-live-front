@@ -74,3 +74,11 @@ OBSBOT Center must be running. It can sit minimized in the tray, and it doesn't 
 16. Set the shot before switching to Baptism Cam.
 17. Decide who runs the camera.
 18. Re-set the shot each time, because it's forgotten when OBS closes or the camera is unplugged.
+
+## Status
+- Merged into BGH Front Remote and the BGH LIVE Front plug-in (`src/camera.cpp`), from version 1.0.0.21.
+- Not yet tried on the real Tiny 2: do "Test first" above. The plug-in writes each OSC reply address from
+  OBSBOT Center to OBS's log once (search the log for `camera:`), which shows whether the position and zoom
+  replies arrive and what they look like.
+- The OBS panel's Camera section also has the OBSBOT Center folder, the OSC port (16284) and the reply port
+  (16285, where OBSBOT Center sends its answers).
