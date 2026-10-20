@@ -63,8 +63,9 @@ The code changes after each phone pairs, and five wrong codes pause pairing for 
   - In OBS, make two scenes, each with a **Browser Source** (1920 × 1080):
     **The New Believers Hymn Book** with `http://127.0.0.1:8650/hymn-screen?book=nbh`, and
     **The Soterio Hymn Collection** with `http://127.0.0.1:8650/hymn-screen?book=soterio`. Each shows only its own
-    hymn book's verses. Between verses it shows a QR code that opens the Soterio hymn book on people's phones, so
-    they can follow along. Add `&bg=none` for no background (to put the words over a camera), `&qr=0` for no QR code.
+    hymn book's verses. Between verses the Soterio scene shows a QR code that opens the Soterio hymn book on
+    people's phones, so they can follow along, and the New Believers scene is black. Add `&bg=none` for no
+    background (to put the words over a camera); `&qr=0` or `&qr=1` turns the QR code off or on.
     The panel's **Hymn verses** section says whether both scenes are there.
 - **Network.** The installer allows TCP port 8650 through Windows Firewall. Only phones on the same network can reach it.
 

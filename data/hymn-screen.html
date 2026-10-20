@@ -11,7 +11,8 @@
      http://127.0.0.1:8650/hymn-screen?book=soterio   in "The Soterio Hymn Collection"
    Each shows only its own hymn book's verses (without book=, any hymn book's). White text on black.
      add &bg=none for no background, to put the words over a camera
-     add &qr=0 (or ?qr=0) to show nothing between verses, instead of the QR code for the hymn book
+     Between verses the Soterio scene shows a QR code for the hymn book, and the New Believers scene is black.
+     Add &qr=0 for black, or &qr=1 for the QR code.
    Phones in the hymn book's Presenter Mode choose what's shown. */
 html,body{margin:0;height:100%;overflow:hidden}
 body{background:#000;color:#fff;cursor:none}
@@ -34,7 +35,8 @@ body.clear .txt,body.clear .num,body.clear .qr b,body.clear .qr span{text-shadow
 "use strict";
 const Q = new URLSearchParams(location.search);
 if(Q.get("bg") === "none") document.body.classList.add("clear");
-const QR = Q.get("qr") !== "0", BOOK = Q.get("book");
+// Between verses: the QR code for the Soterio hymn book, or black for The New Believers Hymn Book (qr=0 or qr=1 to choose)
+const BOOK = Q.get("book"), QR = Q.get("qr") === "1" || (Q.get("qr") !== "0" && BOOK !== "nbh");
 let shown = null, front = null;
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 
