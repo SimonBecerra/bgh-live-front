@@ -332,7 +332,6 @@ html,body{margin:0}
 .pin-n span:last-child{color:var(--accent)}.pin-n.dim{color:var(--dim)}
 .pin-a{font-size:20px;font-weight:700;word-break:break-all}
 .pin p{margin:0;color:var(--muted);line-height:1.45;font-size:14px;max-width:320px}.pin p b{color:var(--fg)}
-#sotHere{width:100%}
 .phone.hymns .toast{bottom:calc(100px + env(safe-area-inset-bottom,0px))}
 </style>
 </head>
@@ -774,7 +773,6 @@ function soterioHTML(){
       </div>
       <div class="nb-st"><i class="dot${st.program === "The Soterio Hymn Collection" ? "" : " idle"}"></i><span>OBS: ${esc(st.program || "…")}${st.proj ? " · projecting" : " · not projecting"}</span></div>
       ${hymnLive ? `<div class="nb-st"><i class="dot"></i><span>On screen: ${esc(liveLabel())}</span><button class="nb-clr" id="nbClr" type="button">Clear screen</button></div>` : ""}
-      <button class="btn" id="sotHere" type="button">${ic("book")}Use it on this phone instead</button>
     </div></div>`;
 }
 function nbMatch(){
@@ -821,7 +819,6 @@ function wireHymns(){
   if($("nbClr")) $("nbClr").onclick = nbClear;
   if($("nbRetry")) $("nbRetry").onclick = () => { NB.err = ""; nbLoad(); render(); };
   if($("nbBooks")) $("nbBooks").onclick = () => { nbDone(); S.book = null; ls.set("bghFrontBook", null); render(); };
-  if($("sotHere")) $("sotHere").onclick = () => { ls.set("pm", "1"); location.href = "/hymns"; };
   const q = $("nbQ");
   if(q) q.oninput = () => { NB.q = q.value; const p = q.selectionStart; NB.scroll = 0; NB.restore = 0; render(); const n = $("nbQ"); n.focus(); try{ n.setSelectionRange(p, p); }catch(e){} };
   document.querySelectorAll("[data-n]").forEach(b => b.onclick = () => { NB.scroll = $("nbScroll").scrollTop; NB.view = "hymn"; NB.n = +b.dataset.n; if(NB.vi[NB.n] == null) NB.vi[NB.n] = 0; render(); });

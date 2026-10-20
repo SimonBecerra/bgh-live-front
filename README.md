@@ -59,7 +59,7 @@ The code changes after each phone pairs, and five wrong codes pause pairing for 
     (https://barringtongospelhall.github.io/soterio/), open Settings → Presenter Mode → Set up and type it. The PIN
     holds this laptop's Wi-Fi address and its pairing code, so the phone opens the hymn book from the laptop
     (`http://<laptop>:8650/hymns`), pairs, and turns Presenter Mode on; the hymn book on the internet can't reach the
-    laptop by itself. Tap a verse to show it. **Use it on this phone instead** does the same on the remote's phone.
+    laptop by itself. Tap a verse to show it.
   - In OBS, make two scenes, each with a **Browser Source** (1920 × 1080):
     **The New Believers Hymn Book** with `http://127.0.0.1:8650/hymn-screen?book=nbh`, and
     **The Soterio Hymn Collection** with `http://127.0.0.1:8650/hymn-screen?book=soterio`. Each shows only its own
