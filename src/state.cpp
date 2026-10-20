@@ -16,7 +16,9 @@ the Free Software Foundation; either version 2 of the License, or
 
 #include <QApplication>
 #include <QGuiApplication>
+#include <QEvent>
 #include <QMetaObject>
+#include <QPointer>
 #include <QScreen>
 #include <QThread>
 #include <QTimer>
@@ -258,6 +260,44 @@ static std::vector<QWidget *> projectorWindows(QScreen *screen)
 	}
 	return out;
 }
+
+// One full-screen projector per screen. OBS lets them pile up: each Fullscreen Projector (from the remote, this
+// panel or OBS's own menus) opens another window on top of the last. So when a new one appears, the full-screen
+// projectors under it on the same screen are closed, and the new one replaces them.
+static void keepNewestProjector(QWidget *newest)
+{
+	if (!newest || !newest->isVisible() || !newest->isFullScreen())
+		return;
+	QScreen *scr = newest->screen();
+	for (QWidget *w : projectorWindows(scr)) {
+		if (w == newest || !w->isFullScreen())
+			continue;
+		obs_log(LOG_INFO, "projector: a new projector replaced the one already on %s",
+			scr ? scr->name().toUtf8().constData() : "a screen");
+		w->close();
+	}
+}
+
+class ProjectorWatch : public QObject {
+public:
+	bool eventFilter(QObject *o, QEvent *e) override
+	{
+		if (e->type() == QEvent::Show && o->isWidgetType()) {
+			auto *w = static_cast<QWidget *>(o);
+			if (w->isWindow() && qstrcmp(w->metaObject()->className(), "OBSProjector") == 0) {
+				// OBS shows the window, then makes it full screen on its screen: check once it has settled
+				QPointer<QWidget> p(w);
+				for (int ms : {250, 1000})
+					QTimer::singleShot(ms, [p]() {
+						if (p)
+							keepNewestProjector(p);
+					});
+			}
+		}
+		return false;
+	}
+};
+static ProjectorWatch *g_projWatch = nullptr;
 
 std::vector<void *> obsProjectorHandles()
 {
@@ -714,6 +754,10 @@ void stateInit()
 	loadPhones();
 	std::lock_guard<std::mutex> lock(g_pm);
 	newCode();
+	if (!g_projWatch && qApp) {
+		g_projWatch = new ProjectorWatch();
+		qApp->installEventFilter(g_projWatch);
+	}
 	for (QScreen *s : QGuiApplication::screens())
 		obs_log(LOG_INFO, "screen: %s | %s | %s", s->name().toUtf8().constData(),
 			s->manufacturer().toUtf8().constData(), s->model().toUtf8().constData());
@@ -722,6 +766,12 @@ void stateInit()
 void stateShutdown()
 {
 	g_closing = true;
+	if (g_projWatch) {
+		if (qApp)
+			qApp->removeEventFilter(g_projWatch);
+		delete g_projWatch;
+		g_projWatch = nullptr;
+	}
 }
 
 } // namespace front
