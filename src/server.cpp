@@ -15,6 +15,7 @@ the Free Software Foundation; either version 2 of the License, or
 //   GET  /api/img          the current or next slide, as a PNG
 //   GET  /hymns            the Soterio hymn book, opened from here so its Presenter Mode can reach OBS (data/hymns.html)
 //   GET  /hymn-screen      the hymn verse on the projector, for an OBS Browser Source (data/hymn-screen.html)
+//   GET  /hymn-qr.svg      the QR code /hymn-screen shows between hymns: the hymn book on the internet
 //   GET  /api/hymn-events  live updates for /hymn-screen (server-sent events): hymn. Needs no pairing: it only sends
 //                          the words on the screen
 // Each request gets its own short-lived thread. Live-update connections are kept in a list and written to by
@@ -57,6 +58,7 @@ typedef int SOCKET;
 #include <thread>
 
 #include "front.h"
+#include "qrcodegen.hpp"
 
 namespace front {
 
@@ -80,7 +82,7 @@ std::vector<std::shared_ptr<Client>> g_clients;
 std::mutex g_qm;
 std::condition_variable g_qcv;
 std::deque<Message> g_queue;
-std::string g_html, g_hymnsHtml, g_screenHtml;
+std::string g_html, g_hymnsHtml, g_screenHtml, g_hymnQr;
 // The hymn verse on the screen, as the JSON a phone sent ({} when the screen is clear)
 std::mutex g_hm;
 std::string g_hymn = "{}";
@@ -304,7 +306,7 @@ void handleCommand(SOCKET s, const Request &r, const std::string &phone)
 	if (cmd == "ping") {
 	} else if (cmd == "mode") {
 		const std::string mode = obs_data_get_string(args, "mode");
-		if (mode == "presenter" || mode == "controller")
+		if (mode == "presenter" || mode == "controller" || mode == "hymns")
 			setPhoneMode(phone, mode);
 		std::lock_guard<std::mutex> lock(g_cm);
 		for (auto &c : g_clients)
@@ -359,6 +361,17 @@ void handleCommand(SOCKET s, const Request &r, const std::string &phone)
 			g_hymn = json;
 		}
 		serverBroadcast("hymn", json);
+		// A verse: put the Hymns scene on the projector, if it isn't already
+		if (json != "{}")
+			err = onUi([]() { return hymnSceneShow(); });
+	} else if (cmd == "hymnback") {
+		// Done with the hymn: clear the verse and go back to the scene from before it
+		{
+			std::lock_guard<std::mutex> lock(g_hm);
+			g_hymn = "{}";
+		}
+		serverBroadcast("hymn", "{}");
+		err = onUi([]() { return hymnSceneBack(); });
 	} else if (cmd == "slide") {
 		const int delta = (int)obs_data_get_int(args, "d");
 		err = slidesStep(delta < 0 ? -1 : 1);
@@ -421,7 +434,7 @@ void handleEvents(SOCKET s, const std::string &phone, const std::string &mode)
 	c->s = s;
 	c->phone = phone;
 	c->mode = mode;
-	if (mode == "presenter" || mode == "controller")
+	if (mode == "presenter" || mode == "controller" || mode == "hymns")
 		setPhoneMode(phone, mode);
 	phoneConnected(phone, true);
 	std::lock_guard<std::mutex> lock(g_cm);
@@ -464,6 +477,8 @@ void handle(SOCKET s)
 	} else if (r.method == "GET" && r.path == "/hymn-screen") {
 		respond(s, 200, "text/html; charset=utf-8",
 			g_screenHtml.empty() ? "BGH LIVE Front: hymn-screen.html is missing." : g_screenHtml);
+	} else if (r.method == "GET" && r.path == "/hymn-qr.svg") {
+		respond(s, 200, "image/svg+xml", g_hymnQr, true);
 	} else if (r.method == "GET" && r.path == "/api/hymn-events") {
 		return handleScreenEvents(s); // keeps the socket
 	} else if (r.method == "GET" && r.path == "/icon.svg") {
@@ -607,6 +622,22 @@ void loadIcons()
 		g_icons["/apple-touch-icon-precomposed.png"] = g_icons["/apple-touch-icon.png"];
 }
 
+// A QR code as an SVG: black squares on white, with the 4-square margin scanners need
+std::string qrSvg(const char *text)
+{
+	using qrcodegen::QrCode;
+	const QrCode qr = QrCode::encodeText(text, QrCode::Ecc::MEDIUM);
+	const int n = qr.getSize(), m = 4, size = n + m * 2;
+	std::string path;
+	for (int y = 0; y < n; y++)
+		for (int x = 0; x < n; x++)
+			if (qr.getModule(x, y))
+				path += "M" + std::to_string(x + m) + "," + std::to_string(y + m) + "h1v1h-1z";
+	return "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 " + std::to_string(size) + " " +
+	       std::to_string(size) + "\" shape-rendering=\"crispEdges\"><rect width=\"100%\" height=\"100%\" fill=\"#fff\"/>" +
+	       "<path d=\"" + path + "\" fill=\"#000\"/></svg>";
+}
+
 std::string loadHtml()
 {
 	char *path = obs_module_file("phone.html");
@@ -628,6 +659,7 @@ bool serverStart()
 	g_html = loadHtml();
 	g_hymnsHtml = loadFile("hymns.html");
 	g_screenHtml = loadFile("hymn-screen.html");
+	g_hymnQr = qrSvg(kHymnBookUrl);
 	loadIcons();
 #ifdef _WIN32
 	WSADATA wsa;

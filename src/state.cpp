@@ -22,6 +22,7 @@ the Free Software Foundation; either version 2 of the License, or
 #include <QTimer>
 #include <QWidget>
 
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <future>
@@ -276,6 +277,8 @@ bool isProjecting()
 }
 
 /* ------------------------------------------------------------------ actions */
+static std::string goToScene(const std::string &name);
+
 std::string switchScene(const std::string &name)
 {
 	bool allowed = false;
@@ -284,6 +287,74 @@ std::string switchScene(const std::string &name)
 			allowed = true;
 	if (!allowed)
 		return "That scene isn't one the remote can switch to.";
+	return goToScene(name);
+}
+
+static std::string programScene()
+{
+	std::string name;
+	if (obs_source_t *cur = obs_frontend_get_current_scene()) {
+		name = obs_source_get_name(cur);
+		obs_source_release(cur);
+	}
+	return name;
+}
+
+static bool sceneExists(const char *name)
+{
+	obs_source_t *src = obs_get_source_by_name(name);
+	const bool ok = src && obs_source_is_scene(src);
+	obs_source_release(src);
+	return ok;
+}
+
+bool hymnSceneExists()
+{
+	return sceneExists(kHymnScene);
+}
+
+// What OBS showed before the hymn, to go back to afterwards ("" when the Hymns scene wasn't switched to)
+static std::string g_hymnPrev, g_hymnPrevTop;
+
+std::string hymnSceneShow()
+{
+	if (!sceneExists(kHymnScene))
+		return ""; // no Hymns scene: the verse still changes, OBS stays as it is
+	const std::string program = programScene();
+	if (program == kHymnScene)
+		return "";
+	g_hymnPrev = program;
+	g_hymnPrevTop = onTop();
+	std::string err = goToScene(kHymnScene);
+	if (err.empty() && !isProjecting())
+		err = setProjecting(true);
+	if (onTop() != "obs") {
+		setOnTop("obs"); // OBS's projector in front of a slideshow, so the verses show
+		applyOnTop();
+	}
+	obs_log(LOG_INFO, "hymn verses: switched to %s from %s", kHymnScene, program.c_str());
+	return err;
+}
+
+std::string hymnSceneBack()
+{
+	if (g_hymnPrev.empty())
+		return "";
+	std::string err;
+	if (programScene() == kHymnScene) // unless someone has switched scenes since
+		err = goToScene(g_hymnPrev);
+	if (!g_hymnPrevTop.empty() && g_hymnPrevTop != onTop()) {
+		setOnTop(g_hymnPrevTop);
+		applyOnTop();
+	}
+	obs_log(LOG_INFO, "hymn verses: back to %s", g_hymnPrev.c_str());
+	g_hymnPrev.clear();
+	g_hymnPrevTop.clear();
+	return err;
+}
+
+static std::string goToScene(const std::string &name)
+{
 	obs_source_t *src = obs_get_source_by_name(name.c_str());
 	if (!src || !obs_source_is_scene(src)) {
 		obs_source_release(src);
@@ -601,7 +672,9 @@ void refreshState()
 			   ",\"recT0\":" + std::to_string(g_recStart) + ",\"proj\":" + (projecting ? "true" : "false") +
 			   ",\"pjFound\":" + (pj ? "true" : "false") + ",\"onTop\":\"" + onTop() + "\"" +
 			   ",\"presFront\":" + (presentationInFront() || !projecting ? "true" : "false") + ",\"pjName\":\"" + jsonEscape(projectorLabel()) +
-			   "\"" + ",\"slides\":" + slidesJson() + "}";
+			   "\"" + ",\"slides\":" + slidesJson() + ",\"hymnScene\":" +
+			   (std::find(present.begin(), present.end(), std::string(kHymnScene)) != present.end() ? "true" : "false") +
+			   ",\"hymnPrev\":\"" + jsonEscape(g_hymnPrev) + "\"}";
 
 	bool changed = false;
 	{

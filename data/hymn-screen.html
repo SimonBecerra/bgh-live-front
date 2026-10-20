@@ -8,6 +8,7 @@
 /* BGH LIVE Front: the hymn verse on the projector. Add it in OBS as a Browser Source:
      http://127.0.0.1:8650/hymn-screen            white text on black, sized 1920 x 1080
      http://127.0.0.1:8650/hymn-screen?bg=none    no background, to put the words over a camera
+     add &qr=0 (or ?qr=0) to show nothing between verses, instead of the QR code for the hymn book
    Phones in the hymn book's Presenter Mode choose what's shown. */
 html,body{margin:0;height:100%;overflow:hidden}
 body{background:#000;color:#fff;cursor:none}
@@ -18,13 +19,19 @@ body.clear{background:transparent}
 .box{flex:1;display:flex;align-items:center;justify-content:center;width:100%;min-height:0;padding:0 7vw 8vh;box-sizing:border-box}
 .txt{font-family:Arimo,Arial,"Helvetica Neue",Helvetica,sans-serif;text-align:center;line-height:1.3;white-space:pre-line}
 .chorus .txt{font-style:italic}
-body.clear .txt,body.clear .num{text-shadow:0 2px 8px rgba(0,0,0,.85),0 0 2px rgba(0,0,0,.9)}
+.qr{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3.2vh;font-family:Arimo,Arial,"Helvetica Neue",Helvetica,sans-serif;text-align:center}
+.qr img{width:34vh;height:34vh;border-radius:1.6vh;background:#fff;padding:1.2vh;box-sizing:border-box}
+.qr b{display:block;font:400 6vh/1.1 "EB Garamond",Georgia,serif}
+.qr span{display:block;font-size:3.3vh;opacity:.75;margin-top:1.4vh}
+body.clear .txt,body.clear .num,body.clear .qr b,body.clear .qr span{text-shadow:0 2px 8px rgba(0,0,0,.85),0 0 2px rgba(0,0,0,.9)}
 </style>
 </head>
 <body>
 <script>
 "use strict";
-if(new URLSearchParams(location.search).get("bg") === "none") document.body.classList.add("clear");
+const Q = new URLSearchParams(location.search);
+if(Q.get("bg") === "none") document.body.classList.add("clear");
+const QR = Q.get("qr") !== "0";
 let shown = null, front = null;
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 
@@ -44,19 +51,21 @@ function fit(layer){
   txt.style.fontSize = lo + "px";
 }
 
-// Dissolves to the new verse (or to nothing)
+// Dissolves to the new verse. With no verse: to the QR code that opens the hymn book on people's phones.
 function show(d){
-  const key = d && d.key ? d.key + "|" + d.text : null;
+  const verse = d && d.key;
+  const key = verse ? d.key + "|" + d.text : QR ? "qr" : null;
   if(key === shown) return;
   shown = key;
   const old = front;
   front = null;
   if(key){
     const el = document.createElement("div");
-    el.className = "layer" + (d.chorus ? " chorus" : "");
-    el.innerHTML = `<div class="num">${esc(d.num)}</div><div class="box"><div class="txt">${esc(d.text)}</div></div>`;
+    el.className = "layer" + (verse && d.chorus ? " chorus" : "");
+    el.innerHTML = verse ? `<div class="num">${esc(d.num)}</div><div class="box"><div class="txt">${esc(d.text)}</div></div>`
+      : `<div class="qr"><img src="/hymn-qr.svg" alt=""><div><b>Follow along on your phone</b><span>Scan for The Soterio Hymn Collection</span></div></div>`;
     document.body.appendChild(el);
-    fit(el);
+    if(verse) fit(el);
     requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add("on")));
     front = el;
   }
@@ -74,6 +83,7 @@ function connect(){
   es.addEventListener("hymn", e => { let d = null; try{ d = JSON.parse(e.data); }catch(x){} show(d); });
   es.onerror = () => { if(es.readyState === 2){ es.close(); setTimeout(connect, 2000); } };   // otherwise the browser retries by itself
 }
+show(null);
 connect();
 </script>
 </body>

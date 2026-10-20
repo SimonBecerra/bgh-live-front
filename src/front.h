@@ -35,6 +35,10 @@ std::string projectorLabel();
 // "obs" (OBS's projector covers everything) or "presentation" (whatever is on the projector stays in front)
 std::string onTop();
 void setOnTop(const std::string &which);
+// The scene hymn verses go on: showing a verse switches OBS to it, when there is one
+constexpr const char *kHymnScene = "Hymns";
+// The hymn book on the internet. The hymn screen's QR code opens it on people's phones.
+constexpr const char *kHymnBookUrl = "https://barringtongospelhall.github.io/soterio/";
 // The only OBS scenes the phone shows, in this order. Any other scenes in OBS are ignored.
 const std::vector<std::string> &allowedScenes();
 
@@ -59,6 +63,11 @@ bool runOnUi(const std::function<void()> &fn, int timeoutMs = 4000);
 std::string switchScene(const std::string &name);
 std::string setRecording(bool on);
 std::string setProjecting(bool on);
+// Hymn verses (UI thread). Show: switches to the Hymns scene, projecting OBS in front, remembering the scene before.
+// Back: returns to the scene (and what was in front on the projector) from before the hymn.
+std::string hymnSceneShow();
+std::string hymnSceneBack();
+bool hymnSceneExists(); // UI thread: OBS has a scene called Hymns
 
 QScreen *projectorScreen();      // UI thread
 bool isProjecting();             // UI thread: an OBS projector is open on the projector screen

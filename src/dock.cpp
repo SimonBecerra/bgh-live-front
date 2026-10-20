@@ -190,6 +190,35 @@ public:
 		topNote->setStyleSheet("color:#8e919a;font-size:11px;");
 		lay->addWidget(topNote);
 
+		// The hymn book's Presenter Mode, opened from this laptop. The QR code also pairs a new phone.
+		auto *hyHead = new QLabel("HYMN VERSES");
+		hyHead->setStyleSheet("font-size:11px;font-weight:bold;letter-spacing:1px;color:#8e919a;margin-top:6px;");
+		lay->addWidget(hyHead);
+		auto *hyRow = new QHBoxLayout();
+		hyRow->setSpacing(12);
+		hymnQr = new QLabel();
+		hymnQr->setFixedSize(110, 110);
+		hymnQr->setScaledContents(true);
+		hymnQr->setStyleSheet("background:white;border-radius:6px;");
+		hyRow->addWidget(hymnQr, 0, Qt::AlignTop);
+		auto *hySteps = new QVBoxLayout();
+		hySteps->setSpacing(4);
+		auto *hyHint = new QLabel("Scan to open the hymn book on a phone and show verses on the projector. Or open");
+		hyHint->setWordWrap(true);
+		hySteps->addWidget(hyHint);
+		hymnUrl = new QLabel();
+		hymnUrl->setTextInteractionFlags(Qt::TextSelectableByMouse);
+		hymnUrl->setStyleSheet("font-weight:bold;");
+		hymnUrl->setWordWrap(true);
+		hySteps->addWidget(hymnUrl);
+		hySteps->addStretch(1);
+		hyRow->addLayout(hySteps, 1);
+		lay->addLayout(hyRow);
+		hymnScene = new QLabel();
+		hymnScene->setWordWrap(true);
+		hymnScene->setTextInteractionFlags(Qt::TextSelectableByMouse);
+		lay->addWidget(hymnScene);
+
 		auto *head = new QLabel("PAIRED PHONES");
 		head->setStyleSheet("font-size:11px;font-weight:bold;letter-spacing:1px;color:#8e919a;margin-top:6px;");
 		lay->addWidget(head);
@@ -213,7 +242,8 @@ public:
 		for (QScreen *s : QGuiApplication::screens())
 			names += s->name().toStdString() + ";";
 		std::string sig = address + "|" + c + "|" + k + "|" + (pj ? pj->name().toStdString() : "-") + "|" + choice +
-				  "|" + names + "|" + (isProjecting() ? "P" : "-") + "|" + onTop();
+				  "|" + names + "|" + (isProjecting() ? "P" : "-") + "|" + onTop() + "|" +
+				  (hymnSceneExists() ? "H" : "-");
 		const auto ph = phones();
 		for (auto &p : ph)
 			sig += "|" + p.id + p.name + p.mode + (p.online ? "1" : "0") + ago(p.lastSeen).toStdString();
@@ -223,10 +253,28 @@ public:
 
 		if (address.empty()) {
 			qr->clear();
+			hymnQr->clear();
 			url->setText("This laptop isn't on a network. Connect it to the church Wi-Fi.");
+			hymnUrl->setText("");
 		} else {
 			qr->setPixmap(qrPixmap(address + "/?k=" + k, 6));
 			url->setText(QString::fromStdString(address));
+			// Pairs the phone first if it needs it, then opens the hymn book
+			hymnQr->setPixmap(qrPixmap(address + "/?k=" + k + "&next=hymns", 5));
+			hymnUrl->setText(QString::fromStdString(address + "/hymns"));
+		}
+		if (hymnSceneExists()) {
+			hymnScene->setText(QString("Showing a verse switches OBS to the <b>%1</b> scene. Going back to the list "
+						   "of hymns switches back.")
+						   .arg(kHymnScene));
+			hymnScene->setStyleSheet("color:#3ccf7e;");
+		} else {
+			hymnScene->setText(QString("Add a scene called <b>%1</b> with a Browser Source of "
+						   "<b>http://127.0.0.1:%2/hymn-screen</b> (1920×1080). Showing a verse then "
+						   "switches OBS to it.")
+						   .arg(kHymnScene)
+						   .arg(kPort));
+			hymnScene->setStyleSheet("color:#ff8a3d;");
 		}
 		code->setText(QString::fromStdString(c));
 
@@ -311,6 +359,7 @@ public:
 			h->addWidget(name, 1);
 			auto *mode = new QLabel(p.mode == "presenter"    ? "PRESENTER"
 						: p.mode == "controller" ? "CONTROLLER"
+						: p.mode == "hymns"      ? "HYMNS"
 									 : "CHOOSING");
 			mode->setStyleSheet(p.mode == "presenter" ? "color:#F5B700;font-size:10px;font-weight:bold;background:transparent;"
 								  : "color:#b8bbc4;font-size:10px;font-weight:bold;background:transparent;");
@@ -330,6 +379,7 @@ public:
 private:
 	QVBoxLayout *lay = nullptr, *list = nullptr;
 	QLabel *qr = nullptr, *url = nullptr, *code = nullptr, *projector = nullptr;
+	QLabel *hymnQr = nullptr, *hymnUrl = nullptr, *hymnScene = nullptr;
 	QComboBox *screenBox = nullptr;
 	QPushButton *projBtn = nullptr, *topAuto = nullptr, *topObs = nullptr, *topPres = nullptr;
 	QLabel *topNote = nullptr;
