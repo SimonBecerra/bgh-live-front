@@ -845,8 +845,11 @@ function joySpeeds(dx, dy, R){
   const len = Math.hypot(dx, dy), f = Math.min(1, len / R);
   if(f < JOY_DZ) return {x:0, y:0};
   const s = 6 + 94 * Math.pow((f - JOY_DZ) / (1 - JOY_DZ), 2);
-  const q = v => { const n = Math.round(v / 2) * 2; return Math.abs(n) < 4 ? 0 : n; };   // near-straight pushes stay straight
-  return {x:q(s * dx / len), y:q(-s * dy / len)};
+  const q = v => { const n = Math.round(v / 2) * 2; return Math.abs(n) < 4 ? 0 : n; };
+  // Near-straight pushes stay straight: a thumb pushing sideways drifts a little up or down, and that drift
+  // would keep starting and stopping the tilt, which interrupts the pan. Within about 20° of an axis, only that axis moves.
+  const ax = Math.abs(dx), ay = Math.abs(dy), SNAP = 0.36;   // tan 20°
+  return {x:ax < ay * SNAP ? 0 : q(s * dx / len), y:ay < ax * SNAP ? 0 : q(-s * dy / len)};
 }
 function stopHeld(){ if(S.held){ const f = S.held; S.held = null; f(); } }
 // While a finger is on the joystick or the zoom, updates from the laptop wait, so the control under the finger isn't replaced

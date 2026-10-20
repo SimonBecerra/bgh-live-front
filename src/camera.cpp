@@ -299,6 +299,7 @@ int g_shotV = 0;
 int g_jx = 0, g_jy = 0;
 std::string g_joyOwner, g_joyOwnerName;
 int64_t g_joyAt = 0;
+int64_t g_joyRepAt = 0; // when the held joystick speeds were last sent again
 
 int64_t g_watchUntil = 0; // a phone has Camera open (refreshed by its preview requests)
 std::set<std::string> g_seenAddrs;
@@ -893,8 +894,20 @@ std::string camCommand(const std::string &cmd, obs_data_t *args, const std::stri
 		};
 		const int x = m(obs_data_get_double(args, "x")), y = m(obs_data_get_double(args, "y"));
 		g_joyAt = now;
+		// Each time a pan starts or changes direction, so the log shows what the camera was asked to do
+		if (x && (!g_jx || (x < 0) != (g_jx < 0)))
+			obs_log(LOG_INFO, "camera: joystick pan %s (speed %d)", x < 0 ? "left" : "right", std::abs(x));
 		axis(g_jx, x, "SetGimbalLeft", "SetGimbalRight");
 		axis(g_jy, y, "SetGimbalDown", "SetGimbalUp");
+		// Held still, the phone repeats itself every 250 ms. Pass that on, so OBSBOT Center keeps moving the camera
+		// even if it lets a single command lapse.
+		if (now - g_joyRepAt >= 240) {
+			g_joyRepAt = now;
+			if (x && x == g_jx)
+				osc(std::string(G) + (x < 0 ? "SetGimbalLeft" : "SetGimbalRight"), {std::abs(x)});
+			if (y && y == g_jy)
+				osc(std::string(G) + (y < 0 ? "SetGimbalDown" : "SetGimbalUp"), {std::abs(y)});
+		}
 		g_jx = x;
 		g_jy = y;
 		if (x || y) {
