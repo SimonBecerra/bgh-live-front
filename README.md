@@ -52,7 +52,8 @@ The code changes after each phone pairs, and five wrong codes pause pairing for 
   book. Choosing one switches OBS to that hymn book's scene and starts projecting, if OBS isn't already. Going back
   to the hymn books, or to another mode, switches OBS back to the scene from before.
   - **The New Believers Hymn Book** works right in the remote: search by number, title or words, open a hymn, and
-    press **Show** or a verse number. **Next** goes verse, chorus, verse; **Clear screen**, or going back to the
+    press **Show** or a verse number. **Next** goes verse, chorus, verse. The search at the top of a hymn finds another
+    hymn without taking the verse off the screen; the two open hymns show as tabs, the one on the screen in yellow. **Clear screen**, or going back to the
     list, fades the words out. Its 700 hymns are in `data/new-believers.json`; after changing the text file, run
     `python3 tools/new-believers-to-json.py "The New Believers Hymn Book.txt"` to rebuild it.
   - **The Soterio Hymn Collection** shows a PIN. On the phone with the Soterio hymn book

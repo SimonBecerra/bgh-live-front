@@ -304,7 +304,23 @@ html,body{margin:0}
 .nb-ttl{display:flex;align-items:baseline;gap:8px;min-width:0}
 .nb-ttl b{font-size:18px;line-height:1.2;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 .nb-ttl .nb-n{font-size:22px;text-align:left}
-.nb-meta{flex:none;font-size:12px;color:var(--muted);line-height:1.45;margin-top:-4px}
+.nb-sw{position:relative;flex:1;min-width:0}
+.nb-hq{min-height:40px;height:40px;border-radius:20px;padding:0 16px}
+.nb-sr{position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:15;max-height:52vh;overflow-y:auto;display:flex;flex-direction:column;padding:4px;border:1px solid var(--line-2);border-radius:14px;background:var(--panel-2);box-shadow:0 14px 34px rgba(0,0,0,.5)}
+.nb-sr[hidden]{display:none}
+.nb-sr button{display:grid;grid-template-columns:40px minmax(0,1fr);gap:8px;align-items:center;padding:10px 8px;border:0;border-radius:9px;background:none;text-align:left}
+.nb-sr button:active{background:var(--panel)}
+.nb-sr button b{font-size:15px;font-weight:600;line-height:1.25}
+.nb-sr .nb-n{font-size:17px}
+.nb-sr i{padding:14px 10px;color:var(--muted);font-style:normal}
+.nb-tabs{display:flex;gap:4px;padding:4px;border:1px solid var(--line);border-radius:12px;flex:none}
+.nb-chip{flex:1 1 0;min-width:0;display:flex;align-items:center;border:1px solid transparent;border-radius:9px}
+.nb-chip.on{border-color:var(--accent);background:var(--panel)}
+.nb-chip.lv{border-color:var(--accent);background:var(--accent)}
+.nb-chip .tb{flex:1;min-width:0;padding:8px 2px 8px 10px;border:0;background:none;font-weight:600;font-size:13px;color:var(--muted);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nb-chip.on .tb{color:var(--fg)}
+.nb-chip.lv .tb,.nb-chip.lv .tx{color:var(--accent-ink)}
+.nb-chip .tx{padding:6px 10px 6px 4px;border:0;background:none;font-size:18px;line-height:1;color:var(--muted)}
 .nb-st{display:flex;align-items:center;gap:8px;flex:none;min-height:30px;font-size:13px;font-weight:600;color:var(--muted);min-width:0}
 .nb-st span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .nb-st .dot{background:var(--accent)}.nb-st .dot.idle{background:var(--dim)}
@@ -454,7 +470,7 @@ function render(){
   if(!es) connect();
   P.className = "phone" + (live() ? "" : " off") + (isLand() ? " land" : "") + (isTurned() ? " turned" : "") + (S.mode === "hymns" ? " hymns" : "");
   // Redrawing keeps the hymn list where it was scrolled to, and the search box being typed in
-  const sc = $("nbScroll"), keepScroll = sc ? sc.scrollTop : null, typing = document.activeElement && document.activeElement.id === "nbQ";
+  const sc = $("nbScroll"), keepScroll = sc ? sc.scrollTop : null, typing = document.activeElement && ["nbQ", "nbHQ"].includes(document.activeElement.id) ? document.activeElement.id : "";
   const caret = typing ? document.activeElement.selectionStart : 0;
   if(S.mode === "hymns" && S.book === "nbh") nbLoad();
   if(S.mode === "hymns" && S.book === "soterio" && !S.pinT) pinRefresh();
@@ -463,7 +479,7 @@ function render(){
   const sc2 = $("nbScroll");
   if(sc2){ if(NB.restore != null){ sc2.scrollTop = NB.restore; NB.restore = null; } else if(keepScroll != null && NB.view === NB.lastView) sc2.scrollTop = keepScroll; }
   NB.lastView = NB.view;
-  if(typing && $("nbQ")){ $("nbQ").focus(); try{ $("nbQ").setSelectionRange(caret, caret); }catch(e){} }
+  if(typing && $(typing)){ $(typing).focus(); try{ $(typing).setSelectionRange(caret, caret); }catch(e){} }
   wire();
   if(S.mode === "presenter") preloadSlide();
 }
@@ -679,7 +695,7 @@ function wireStop(){
    Two hymn books. The Soterio Hymn Collection opens from this laptop at /hymns, where its own Presenter Mode
    shows verses. The New Believers Hymn Book (data/new-believers.json) lives here in the remote. Either way the
    verse goes on /hymn-screen in OBS, and showing one switches OBS to the Hymns scene. */
-const NB = {data:null, loading:false, err:"", view:"list", q:"", n:null, vi:{}, used:false, scroll:0, restore:null, lastView:null};
+const NB = {data:null, loading:false, err:"", view:"list", q:"", hq:"", tabs:[], n:null, vi:{}, used:false, scroll:0, restore:null, lastView:null};
 let hymnLive = null;   // the verse on the screen, from any phone: {key, book, n, i, k, num, label, ...}
 const BOOKS = {
   soterio:{name:"The Soterio Hymn Collection", text:"Connect a phone with the hymn book's Presenter Mode"},
@@ -775,8 +791,8 @@ function soterioHTML(){
       ${hymnLive ? `<div class="nb-st"><i class="dot"></i><span>On screen: ${esc(liveLabel())}</span><button class="nb-clr" id="nbClr" type="button">Clear screen</button></div>` : ""}
     </div></div>`;
 }
-function nbMatch(){
-  const q = NB.q.trim().toLowerCase();
+function nbMatch(text){
+  const q = (text == null ? NB.q : text).trim().toLowerCase();
   if(!q) return NB.data;
   if(/^\d+$/.test(q)) return NB.data.filter(h => String(h.n).startsWith(q));
   const words = q.split(/\s+/);
@@ -794,13 +810,14 @@ function nbListHTML(){
 function nbHymnHTML(h){
   const P = nbItems(h), lk = nbLiveHere(h), i = Math.min(NB.vi[h.n] || 0, P.length - 1), it = P[i] || {text:"", label:"1"};
   const on = k => lk && lk.i === i && lk.k === k ? " live" : "", nx = nbNext(h, 1), pv = nbNext(h, -1);
-  const meta = [h.words && "Words: " + h.words, h.music && "Music: " + h.music, [h.tune, h.meter].filter(Boolean).join(" · ")].filter(Boolean);
   const other = hymnLive && !lk;
   return `<div class="nb hy">
     <div class="nb-bar"><button class="gear" id="nbList" type="button" aria-label="All hymns">${ic("back")}</button>
-      <div class="nb-ttl"><span class="nb-n">${h.n}</span><b>${esc(h.t)}</b></div></div>
-    ${meta.length ? `<div class="nb-meta">${meta.map(esc).join("<br>")}</div>` : ""}
-    <div class="nb-st${other ? " other" : ""}"><i class="dot${hymnLive ? "" : " idle"}"></i><span>${hymnLive ? "On screen: " + esc(other ? liveLabel() : lk.label) : "Screen shows the QR code"}</span>${hymnLive ? `<button class="nb-clr" id="nbClr" type="button">Clear screen</button>` : ""}</div>
+      <div class="nb-sw"><input class="txt nb-hq" id="nbHQ" type="search" inputmode="search" placeholder="Search for another hymn" value="${esc(NB.hq)}" autocomplete="off" aria-label="Search for another hymn">
+      <div class="nb-sr" id="nbSR"${NB.hq.trim() ? "" : " hidden"}>${nbResultsHTML()}</div></div></div>
+    ${nbTabsHTML()}
+    <div class="nb-ttl"><span class="nb-n">${h.n}</span><b>${esc(h.t)}</b></div>
+    <div class="nb-st${other ? " other" : ""}"><i class="dot${hymnLive ? "" : " idle"}"></i><span>${hymnLive ? "On screen: " + esc(other ? liveLabel() : lk.label) : "Screen is clear"}</span>${hymnLive ? `<button class="nb-clr" id="nbClr" type="button">Clear screen</button>` : ""}</div>
     <div class="nb-vs ctl" role="group" aria-label="Verses">${P.map((x, j) => `<button class="nb-v${j === i ? " on" : ""}${lk && lk.i === j ? " lv" : ""}" type="button" data-vi="${j}" aria-label="${x.c ? "Chorus" : "Verse " + x.label}">${esc(x.label)}</button>`).join("")}</div>
     <div class="nb-scroll ctl" id="nbScroll">
       <button class="nb-blk${it.c ? " ch" : ""}${on("v")}" id="nbV" type="button">${it.c ? "" : `<span class="nb-vn">${esc(it.label)}</span>`}<span>${esc(it.text)}</span></button>
@@ -810,6 +827,29 @@ function nbHymnHTML(h){
       <button class="btn" id="nbBack" type="button" aria-label="Back: ${esc(nbName(P, pv) || "start of the hymn")}" ${pv ? "" : "disabled"}>${ic("back")}</button>
       <button class="btn primary" id="nbNext" type="button" ${nx ? "" : "disabled"}><span>${nx ? (lk ? "Next" : "Show") : "End of hymn"}</span>${nx ? `<small>${esc(nbName(P, nx))}</small>` : ""}${ic("fwd")}</button>
     </div></div>`;
+}
+// Searching from a hymn: the verse on the screen stays there until a verse of the new hymn is shown
+function nbResultsHTML(){
+  if(!NB.data || !NB.hq.trim()) return "";
+  const r = nbMatch(NB.hq).slice(0, 8);
+  return r.length ? r.map(h => `<button type="button" data-hn="${h.n}"><span class="nb-n">${h.n}</span><b>${esc(h.t)}</b></button>`).join("") : `<i>No hymns match.</i>`;
+}
+// The two hymns open, like tabs: the one on the screen is solid yellow
+function nbTabsHTML(){
+  if(NB.tabs.length < 2) return "";
+  const lv = hymnLive && hymnLive.book === "nbh" ? hymnLive.n : null;
+  return `<div class="nb-tabs" role="tablist" aria-label="Open hymns">${NB.tabs.map(n => { const h = nbHymn(n); if(!h) return "";
+    const lab = n + " · " + h.t;
+    return `<span class="nb-chip${n === NB.n ? " on" : ""}${n === lv ? " lv" : ""}"><button class="tb" type="button" role="tab" aria-selected="${n === NB.n}" data-tab="${n}">${esc(lab)}</button><button class="tx" type="button" data-tabx="${n}" aria-label="Close ${esc(lab)}">×</button></span>`; }).join("")}</div>`;
+}
+function nbOpen(n){
+  if(!NB.tabs.includes(n)){
+    NB.tabs.push(n);
+    if(NB.tabs.length > 2){ const k = NB.tabs.find(x => x !== NB.n && x !== n); NB.tabs = NB.tabs.filter(x => x !== k); }
+  }
+  NB.view = "hymn"; NB.n = n; if(NB.vi[n] == null) NB.vi[n] = 0; NB.hq = "";
+  if(document.activeElement) document.activeElement.blur();
+  render();
 }
 function wireHymns(){
   document.querySelectorAll("[data-book]").forEach(b => b.onclick = () => {
@@ -821,11 +861,22 @@ function wireHymns(){
   if($("nbBooks")) $("nbBooks").onclick = () => { nbDone(); S.book = null; ls.set("bghFrontBook", null); render(); };
   const q = $("nbQ");
   if(q) q.oninput = () => { NB.q = q.value; const p = q.selectionStart; NB.scroll = 0; NB.restore = 0; render(); const n = $("nbQ"); n.focus(); try{ n.setSelectionRange(p, p); }catch(e){} };
-  document.querySelectorAll("[data-n]").forEach(b => b.onclick = () => { NB.scroll = $("nbScroll").scrollTop; NB.view = "hymn"; NB.n = +b.dataset.n; if(NB.vi[NB.n] == null) NB.vi[NB.n] = 0; render(); });
+  document.querySelectorAll("[data-n]").forEach(b => b.onclick = () => { NB.scroll = $("nbScroll").scrollTop; NB.tabs = []; nbOpen(+b.dataset.n); });
   const h = S.book === "nbh" && NB.view === "hymn" && $("nbList") && nbHymn(NB.n);
   if(!h) return;
   // Back to the list: the verse goes, the QR code shows, and OBS stays on the hymn book's scene
-  $("nbList").onclick = () => { if(hymnLive) nbClear(); NB.used = false; NB.view = "list"; NB.restore = NB.scroll; render(); };
+  $("nbList").onclick = () => { if(hymnLive) nbClear(); NB.used = false; NB.view = "list"; NB.tabs = []; NB.hq = ""; NB.restore = NB.scroll; render(); };
+  const hq = $("nbHQ"), sr = $("nbSR");
+  const wireResults = () => sr.querySelectorAll("[data-hn]").forEach(b => { b.onpointerdown = e => e.preventDefault(); b.onclick = () => nbOpen(+b.dataset.hn); });
+  hq.oninput = () => { NB.hq = hq.value; sr.innerHTML = nbResultsHTML(); sr.hidden = !NB.hq.trim(); wireResults(); };
+  hq.onkeydown = e => { if(e.key === "Escape"){ NB.hq = ""; hq.value = ""; sr.hidden = true; hq.blur(); } else if(e.key === "Enter"){ const f = sr.querySelector("[data-hn]"); if(f) nbOpen(+f.dataset.hn); } };
+  wireResults();
+  document.querySelectorAll("[data-tab]").forEach(b => b.onclick = () => { NB.n = +b.dataset.tab; render(); });
+  document.querySelectorAll("[data-tabx]").forEach(b => b.onclick = () => {
+    const n = +b.dataset.tabx; NB.tabs = NB.tabs.filter(x => x !== n);
+    if(n === NB.n){ if(NB.tabs.length) NB.n = NB.tabs[0]; else { $("nbList").onclick(); return; } }
+    render();
+  });
   document.querySelectorAll("[data-vi]").forEach(b => b.onclick = () => nbShow(h, +b.dataset.vi, "v"));
   $("nbV").onclick = () => nbShow(h, NB.vi[h.n] || 0, "v");
   if($("nbC")) $("nbC").onclick = () => nbShow(h, NB.vi[h.n] || 0, "c");
