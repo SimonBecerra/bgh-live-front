@@ -326,6 +326,13 @@ html,body{margin:0}
 .nb-nav #nbNext small{font-size:14px;font-weight:700;opacity:.8}
 .nb-nav #nbNext svg.i{width:28px;height:28px}
 .nb-nav #nbNext:disabled{opacity:1;background:var(--panel-2);border-color:var(--line-2);color:var(--muted)}
+.nb-center{flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;gap:14px;padding-bottom:4vh}
+.pin{display:flex;flex-direction:column;align-items:center;gap:12px;padding:22px 16px;border:2px solid var(--accent);border-radius:20px;background:var(--accent-soft);text-align:center}
+.pin-n{display:flex;justify-content:center;gap:14px;font-size:46px;font-weight:800;letter-spacing:.06em;line-height:1;color:var(--fg)}
+.pin-n span:last-child{color:var(--accent)}.pin-n.dim{color:var(--dim)}
+.pin-a{font-size:20px;font-weight:700;word-break:break-all}
+.pin p{margin:0;color:var(--muted);line-height:1.45;font-size:14px;max-width:320px}.pin p b{color:var(--fg)}
+#sotHere{width:100%}
 .phone.hymns .toast{bottom:calc(100px + env(safe-area-inset-bottom,0px))}
 </style>
 </head>
@@ -374,7 +381,7 @@ const S = {
   shownSrc:"", loadingSrc:"", waiting:false, waitT:null, freshUntil:0, book:ls.get("bghFrontBook")
 };
 if(!["presenter", "controller", "hymns"].includes(S.mode)) S.mode = null;
-if(S.book !== "nbh") S.book = null;
+if(S.book !== "nbh" && S.book !== "soterio") S.book = null;
 const now = () => Date.now() + S.offset;   // the laptop's clock
 const mqLand = matchMedia("(orientation: landscape)");
 const physLand = () => mqLand.matches;
@@ -451,6 +458,7 @@ function render(){
   const sc = $("nbScroll"), keepScroll = sc ? sc.scrollTop : null, typing = document.activeElement && document.activeElement.id === "nbQ";
   const caret = typing ? document.activeElement.selectionStart : 0;
   if(S.mode === "hymns" && S.book === "nbh") nbLoad();
+  if(S.mode === "hymns" && S.book === "soterio" && !S.pinT) pinRefresh();
   P.innerHTML = headerHTML() + (S.mode === "presenter" ? presenterHTML() : S.mode === "hymns" ? hymnsHTML() : controllerHTML())
     + (S.sheet ? S.sheet() : "") + `<div class="toast" id="toast" role="status" hidden></div>`;
   const sc2 = $("nbScroll");
@@ -675,7 +683,7 @@ function wireStop(){
 const NB = {data:null, loading:false, err:"", view:"list", q:"", n:null, vi:{}, used:false, scroll:0, restore:null, lastView:null};
 let hymnLive = null;   // the verse on the screen, from any phone: {key, book, n, i, k, num, label, ...}
 const BOOKS = {
-  soterio:{name:"The Soterio Hymn Collection", text:"Open the hymn book and use its Presenter Mode"},
+  soterio:{name:"The Soterio Hymn Collection", text:"Connect a phone with the hymn book's Presenter Mode"},
   nbh:{name:"The New Believers Hymn Book", text:"700 hymns, shown from this remote"}
 };
 async function nbLoad(){
@@ -715,17 +723,59 @@ async function nbShow(h, i, k){
   if(!r.ok) render();
 }
 function nbClear(){ if(!hymnLive) return; hymnLive = null; render(); cmd("hymn", {}); }
-// Done with the hymn: clear it, and OBS goes back to the scene from before
-function nbDone(){ if(!NB.used && !hymnLive) return; NB.used = false; hymnLive = null; cmd("hymnback"); }
+// Done with the hymn book: clear the verse, and OBS goes back to the scene from before the hymn book
+function nbDone(){ NB.used = false; hymnLive = null; S.pin = ""; clearTimeout(S.pinT); cmd("hymnback"); }
+// Choosing a hymn book puts its scene on the projector, projecting if OBS isn't
+async function bookChosen(book){
+  S.book = book; ls.set("bghFrontBook", book); render();
+  const r = await cmd("hymnbook", {book});
+  if(r.ok) toast(`OBS is showing “${BOOKS[book].name}”.`);
+}
+/* The PIN for the Soterio hymn book's Presenter Mode: this laptop's Wi-Fi address and its pairing code.
+   The hymn book on the internet can't reach the laptop itself, so the PIN takes that phone to the laptop's copy
+   of it (http://<laptop>:8650/hymns), pairs it and turns Presenter Mode on. Eg 192.168.1.20 with code 482: 1276 482
+   (1 = 192.168.x.y, then x*256+y). 2 = 10.x.y.z, 3 = 172.16-31.x.y. "" when the address can't go in a PIN. */
+function pinFor(code){
+  const m = String(window.BGH_HOST || location.hostname).match(/^(\d+)\.(\d+)\.(\d+)\.(\d+)$/);
+  if(!m || !/^\d{3}$/.test(code || "") || (location.port || "80") !== String(8650) && !window.BGH_HOST) return null;
+  const [a, b, c, e] = m.slice(1).map(Number);
+  const t = a === 192 && b === 168 ? [1, c * 256 + e] : a === 10 ? [2, b * 65536 + c * 256 + e] : a === 172 && b >= 16 && b <= 31 ? [3, (b - 16) * 65536 + c * 256 + e] : null;
+  return t ? {addr:String(t[0]) + t[1], code} : null;
+}
+async function pinRefresh(){
+  clearTimeout(S.pinT);
+  if(S.mode !== "hymns" || S.book !== "soterio") return;
+  if(!document.hidden){
+    let j = {}; try{ const r = await fetch("/api/cmd", {method:"POST", headers:{"Content-Type":"application/json", "Authorization":"Bearer " + S.token}, body:JSON.stringify({cmd:"pairpin"})}); j = await r.json(); }catch(e){}
+    if(j.code && j.code !== S.pin){ S.pin = j.code; render(); }
+  }
+  S.pinT = setTimeout(pinRefresh, 4000);   // the code changes each time a phone pairs
+}
 const liveLabel = () => !hymnLive ? "" : (hymnLive.book === "nbh" ? "Hymn " : "") + hymnLive.num + " · " + hymnLive.label;
 
 function hymnsHTML(){
+  if(S.book === "soterio") return soterioHTML();
   if(S.book !== "nbh") return `<div class="nb books ctl"><h2 class="nb-q">Which hymn book?</h2>
     <div class="modes">${Object.entries(BOOKS).map(([k, b]) => `<button class="mode-card book" type="button" data-book="${k}"><i class="bico ${k}" aria-hidden="true"></i><b>${b.name}</b><span>${b.text}</span></button>`).join("")}</div>
     ${hymnLive ? `<div class="nb-st"><i class="dot"></i><span>On screen: ${esc(liveLabel())}</span><button class="nb-clr" id="nbClr" type="button">Clear screen</button></div>` : ""}</div>`;
   if(!NB.data) return `<div class="nb"><div class="nb-bar"><button class="gear" id="nbBooks" type="button" aria-label="Hymn books">${ic("back")}</button><b class="nb-bk">${BOOKS.nbh.name}</b></div>
     <div class="pv-empty" style="position:static;flex:1">${NB.err ? esc(NB.err) + `<br><br><button class="btn" id="nbRetry" type="button">Try again</button>` : "Opening the hymn book…"}</div></div>`;
   return NB.view === "hymn" && nbHymn(NB.n) ? nbHymnHTML(nbHymn(NB.n)) : nbListHTML();
+}
+function soterioHTML(){
+  const st = S.st || {}, p = pinFor(S.pin), sc = st.hymnScenes || {};
+  return `<div class="nb"><div class="nb-bar"><button class="gear" id="nbBooks" type="button" aria-label="Hymn books">${ic("back")}</button><b class="nb-bk">${BOOKS.soterio.name}</b></div>
+    <div class="nb-center">
+      ${sc.soterio === false ? `<div class="banner">${ic("wifi")}<div>OBS has no scene called <b>${BOOKS.soterio.name}</b>. Add it with a Browser Source of http://127.0.0.1:8650/hymn-screen?book=soterio.</div></div>` : ""}
+      <div class="pin">
+        <span class="label">Presenter Mode PIN</span>
+        ${p ? `<div class="pin-n tn" aria-label="PIN ${esc((p.addr + p.code).split("").join(" "))}"><span>${esc(p.addr)}</span><span>${esc(p.code)}</span></div>` : S.pin ? `<div class="pin-a">${esc(location.host)}/hymns</div>` : `<div class="pin-n tn dim"><span>· · ·</span></div>`}
+        <p>${p ? "On the phone with the Soterio hymn book, open <b>Settings</b>, then <b>Presenter Mode</b>, and type this PIN. The phone needs to be on the church Wi-Fi." : S.pin ? "On the phone on the church Wi-Fi, open this address, then turn on Presenter Mode in the hymn book's Settings." : "Getting the PIN from the front laptop…"}</p>
+      </div>
+      <div class="nb-st"><i class="dot${st.program === "The Soterio Hymn Collection" ? "" : " idle"}"></i><span>OBS: ${esc(st.program || "…")}${st.proj ? " · projecting" : " · not projecting"}</span></div>
+      ${hymnLive ? `<div class="nb-st"><i class="dot"></i><span>On screen: ${esc(liveLabel())}</span><button class="nb-clr" id="nbClr" type="button">Clear screen</button></div>` : ""}
+      <button class="btn" id="sotHere" type="button">${ic("book")}Use it on this phone instead</button>
+    </div></div>`;
 }
 function nbMatch(){
   const q = NB.q.trim().toLowerCase();
@@ -765,18 +815,20 @@ function nbHymnHTML(h){
 }
 function wireHymns(){
   document.querySelectorAll("[data-book]").forEach(b => b.onclick = () => {
-    if(b.dataset.book === "soterio"){ location.href = "/hymns"; return; }
-    S.book = "nbh"; ls.set("bghFrontBook", "nbh"); NB.view = "list"; nbLoad(); render();
+    if(b.dataset.book === "soterio"){ S.pin = ""; bookChosen("soterio"); pinRefresh(); return; }
+    NB.view = "list"; nbLoad(); bookChosen("nbh");
   });
   if($("nbClr")) $("nbClr").onclick = nbClear;
   if($("nbRetry")) $("nbRetry").onclick = () => { NB.err = ""; nbLoad(); render(); };
   if($("nbBooks")) $("nbBooks").onclick = () => { nbDone(); S.book = null; ls.set("bghFrontBook", null); render(); };
+  if($("sotHere")) $("sotHere").onclick = () => { ls.set("pm", "1"); location.href = "/hymns"; };
   const q = $("nbQ");
   if(q) q.oninput = () => { NB.q = q.value; const p = q.selectionStart; NB.scroll = 0; NB.restore = 0; render(); const n = $("nbQ"); n.focus(); try{ n.setSelectionRange(p, p); }catch(e){} };
   document.querySelectorAll("[data-n]").forEach(b => b.onclick = () => { NB.scroll = $("nbScroll").scrollTop; NB.view = "hymn"; NB.n = +b.dataset.n; if(NB.vi[NB.n] == null) NB.vi[NB.n] = 0; render(); });
   const h = S.book === "nbh" && NB.view === "hymn" && $("nbList") && nbHymn(NB.n);
   if(!h) return;
-  $("nbList").onclick = () => { nbDone(); NB.view = "list"; NB.restore = NB.scroll; render(); };
+  // Back to the list: the verse goes, the QR code shows, and OBS stays on the hymn book's scene
+  $("nbList").onclick = () => { if(hymnLive) nbClear(); NB.used = false; NB.view = "list"; NB.restore = NB.scroll; render(); };
   document.querySelectorAll("[data-vi]").forEach(b => b.onclick = () => nbShow(h, +b.dataset.vi, "v"));
   $("nbV").onclick = () => nbShow(h, NB.vi[h.n] || 0, "v");
   if($("nbC")) $("nbC").onclick = () => nbShow(h, NB.vi[h.n] || 0, "c");
@@ -806,7 +858,7 @@ function wireModePick(){
   });
 }
 function setMode(m){
-  if(S.mode === "hymns" && m !== "hymns") nbDone();
+  if(S.mode === "hymns" && m !== "hymns" && S.book) nbDone();
   if(m === "hymns"){ S.book = null; ls.set("bghFrontBook", null); }
   S.mode = m; ls.set("bghFrontMode", m); S.sheet = null; S.armed = null; S.trOpen = false;
   if(es && es.readyState !== 2) cmd("mode", {mode:m}); else connect();
@@ -864,8 +916,12 @@ setInterval(() => { const t = $("recT"); if(t && S.st && S.st.rec) t.textContent
 
 // Opened from the QR code in OBS: pair straight away
 const qrKey = new URLSearchParams(location.search).get("k");
+// Sent here by a Presenter Mode PIN: pair with its code, then on to the hymn book with Presenter Mode on
+const pinCode = new URLSearchParams(location.search).get("code");
+if(new URLSearchParams(location.search).get("pm") === "1") ls.set("pm", "1");
 if(nextPage === "hymns" && S.token) location.replace("/hymns");   // already paired: back to the hymn book
 else if(qrKey && !S.token){ render(); tryPair({key:qrKey}); }
+else if(pinCode && !S.token){ render(); tryPair({code:pinCode}); }
 else { if(qrKey) history.replaceState(null, "", "/"); render(); }
 </script>
 </body>

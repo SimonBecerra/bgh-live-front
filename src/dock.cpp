@@ -243,7 +243,7 @@ public:
 			names += s->name().toStdString() + ";";
 		std::string sig = address + "|" + c + "|" + k + "|" + (pj ? pj->name().toStdString() : "-") + "|" + choice +
 				  "|" + names + "|" + (isProjecting() ? "P" : "-") + "|" + onTop() + "|" +
-				  (hymnSceneExists() ? "H" : "-");
+				  (hymnSceneExists("nbh") ? "N" : "-") + (hymnSceneExists("soterio") ? "S" : "-");
 		const auto ph = phones();
 		for (auto &p : ph)
 			sig += "|" + p.id + p.name + p.mode + (p.online ? "1" : "0") + ago(p.lastSeen).toStdString();
@@ -263,18 +263,23 @@ public:
 			hymnQr->setPixmap(qrPixmap(address + "/?k=" + k + "&next=hymns", 5));
 			hymnUrl->setText(QString::fromStdString(address + "/hymns"));
 		}
-		if (hymnSceneExists()) {
-			hymnScene->setText(QString("Showing a verse switches OBS to the <b>%1</b> scene. Going back to the list "
-						   "of hymns switches back.")
-						   .arg(kHymnScene));
-			hymnScene->setStyleSheet("color:#3ccf7e;");
-		} else {
-			hymnScene->setText(QString("Add a scene called <b>%1</b> with a Browser Source of "
-						   "<b>http://127.0.0.1:%2/hymn-screen</b> (1920×1080). Showing a verse then "
-						   "switches OBS to it.")
-						   .arg(kHymnScene)
-						   .arg(kPort));
-			hymnScene->setStyleSheet("color:#ff8a3d;");
+		// Each hymn book's scene: there, or how to add it
+		{
+			QString lines;
+			bool all = true;
+			for (const char *book : {"nbh", "soterio"}) {
+				const bool here = hymnSceneExists(book);
+				all = all && here;
+				lines += QString("%1<b>%2</b>: %3")
+						 .arg(lines.isEmpty() ? "" : "<br>")
+						 .arg(QString(front::hymnScene(book)).toHtmlEscaped())
+						 .arg(here ? QString("ready")
+							   : QString("add this scene with a Browser Source of http://127.0.0.1:%1/hymn-screen?book=%2 (1920×1080)")
+								     .arg(kPort)
+								     .arg(book));
+			}
+			hymnScene->setText(lines + "<br>Choosing a hymn book on the remote switches OBS to its scene and projects it.");
+			hymnScene->setStyleSheet(all ? "color:#3ccf7e;" : "color:#ff8a3d;");
 		}
 		code->setText(QString::fromStdString(c));
 

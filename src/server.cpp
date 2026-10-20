@@ -362,11 +362,25 @@ void handleCommand(SOCKET s, const Request &r, const std::string &phone)
 			g_hymn = json;
 		}
 		serverBroadcast("hymn", json);
-		// A verse: put the Hymns scene on the projector, if it isn't already
-		if (json != "{}")
-			err = onUi([]() { return hymnSceneShow(); });
+		// A verse: put its hymn book's scene on the projector, if it isn't already
+		if (json != "{}") {
+			obs_data_t *sh = obs_data_get_obj(args, "show");
+			const std::string book = sh && std::string(obs_data_get_string(sh, "book")) == "nbh" ? "nbh" : "soterio";
+			if (sh)
+				obs_data_release(sh);
+			err = onUi([book]() { return hymnSceneShow(book, false); });
+		}
+	} else if (cmd == "hymnbook") {
+		// A hymn book chosen on the remote: its scene on the projector, projecting if OBS isn't
+		const std::string book = std::string(obs_data_get_string(args, "book")) == "nbh" ? "nbh" : "soterio";
+		err = onUi([book]() { return hymnSceneShow(book, true); });
+	} else if (cmd == "pairpin") {
+		// For the PIN the remote shows, to pair a phone using the Soterio hymn book: the current pairing code
+		obs_data_release(args);
+		obs_data_release(d);
+		return respondJson(s, 200, "{\"ok\":true,\"code\":\"" + jsonEscape(pairCode()) + "\"}");
 	} else if (cmd == "hymnback") {
-		// Done with the hymn: clear the verse and go back to the scene from before it
+		// Done with the hymn book: clear the verse and go back to the scene from before it
 		{
 			std::lock_guard<std::mutex> lock(g_hm);
 			g_hymn = "{}";

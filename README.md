@@ -48,24 +48,24 @@ The code changes after each phone pairs, and five wrong codes pause pairing for 
   **OBS Projector** covers everything; **Presentation** keeps whatever is on the projector in front of OBS.
 - **Scenes.** Only the five scenes above appear on the phone; other scenes in OBS are ignored. Each needs two taps.
   They're listed in `allowedScenes()` in `src/state.cpp`.
-- **Hymns.** Choose **Hymns** on the remote (tap the mode label at the top to choose another mode), then a hymn book.
-  **The New Believers Hymn Book** works right in the remote: search by number, title or words, open a hymn, and
-  press **Show** or a verse number. **Next** goes verse, chorus, verse; **Clear screen** fades the words out.
-  Its 700 hymns are in `data/new-believers.json`; after changing the text file, run
-  `python3 tools/new-believers-to-json.py "The New Believers Hymn Book.txt"` to rebuild it.
-  **The Soterio Hymn Collection** opens that hymn book with its own **Presenter Mode**. Open
-  the hymn book from the laptop, at the remote's address followed by `/hymns` (like `http://192.168.1.20:8650/hymns`),
-  or choose **Hymns** on the remote. It downloads the newest hymn book from
-  https://barringtongospelhall.github.io/soterio/ and keeps a copy on the phone for when there's no internet. In its
-  Settings, turn on **Presenter Mode**, then open a hymn and tap a verse number: the verse fades in on the screen. Tap
-  the chorus to show the chorus, and **Clear screen** to fade it out. Going back to the list of hymns clears it too.
-  **Next** steps through verse 1, the chorus, verse 2, the chorus and so on; the arrow beside it goes back.
-  The panel's **Hymn verses** QR code opens the hymn book on a phone, pairing it first if it isn't paired.
-  In OBS, add a scene called **Hymns** with a **Browser Source** of `http://127.0.0.1:8650/hymn-screen`,
-  1920 × 1080. Showing a verse switches OBS to the Hymns scene (projecting it in front of any slideshow), and going
-  back to the list of hymns switches back to the scene from before. Between verses, and after **Clear screen**, the
-  screen shows a QR code that opens the hymn book on people's phones, so they can follow along. The screen is white
-  words on black; add `?bg=none` for no background (to put the words over a camera), and `qr=0` for no QR code.
+- **Hymns.** Choose **Hymns** on the remote (tap the mode label at the top to choose another mode), then a hymn
+  book. Choosing one switches OBS to that hymn book's scene and starts projecting, if OBS isn't already. Going back
+  to the hymn books, or to another mode, switches OBS back to the scene from before.
+  - **The New Believers Hymn Book** works right in the remote: search by number, title or words, open a hymn, and
+    press **Show** or a verse number. **Next** goes verse, chorus, verse; **Clear screen**, or going back to the
+    list, fades the words out. Its 700 hymns are in `data/new-believers.json`; after changing the text file, run
+    `python3 tools/new-believers-to-json.py "The New Believers Hymn Book.txt"` to rebuild it.
+  - **The Soterio Hymn Collection** shows a PIN. On the phone with the Soterio hymn book
+    (https://barringtongospelhall.github.io/soterio/), open Settings → Presenter Mode → Set up and type it. The PIN
+    holds this laptop's Wi-Fi address and its pairing code, so the phone opens the hymn book from the laptop
+    (`http://<laptop>:8650/hymns`), pairs, and turns Presenter Mode on; the hymn book on the internet can't reach the
+    laptop by itself. Tap a verse to show it. **Use it on this phone instead** does the same on the remote's phone.
+  - In OBS, make two scenes, each with a **Browser Source** (1920 × 1080):
+    **The New Believers Hymn Book** with `http://127.0.0.1:8650/hymn-screen?book=nbh`, and
+    **The Soterio Hymn Collection** with `http://127.0.0.1:8650/hymn-screen?book=soterio`. Each shows only its own
+    hymn book's verses. Between verses it shows a QR code that opens the Soterio hymn book on people's phones, so
+    they can follow along. Add `&bg=none` for no background (to put the words over a camera), `&qr=0` for no QR code.
+    The panel's **Hymn verses** section says whether both scenes are there.
 - **Network.** The installer allows TCP port 8650 through Windows Firewall. Only phones on the same network can reach it.
 
 ## Where things are on the laptop
