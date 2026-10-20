@@ -345,7 +345,9 @@ html,body{margin:0}
 .nb-center{flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;gap:14px;padding-bottom:4vh}
 .pin{display:flex;flex-direction:column;align-items:center;gap:12px;padding:22px 16px;border:2px solid var(--accent);border-radius:20px;background:var(--accent-soft);text-align:center}
 .pin-n{display:flex;justify-content:center;gap:14px;font-size:46px;font-weight:800;letter-spacing:.06em;line-height:1;color:var(--fg)}
-.pin-n span:last-child{color:var(--accent)}.pin-n.dim{color:var(--dim)}
+.pin-n{font-size:64px;letter-spacing:.14em;color:var(--accent)}.pin-n.dim{color:var(--dim)}
+.pin-addr{display:flex;flex-direction:column;gap:2px;padding-top:10px;border-top:1px solid var(--line-2);width:100%;max-width:300px;font-size:13px;color:var(--muted)}
+.pin-addr b{font-size:17px;color:var(--fg)}.pin-addr small{font-size:12px;color:var(--dim)}
 .pin-a{font-size:20px;font-weight:700;word-break:break-all}
 .pin p{margin:0;color:var(--muted);line-height:1.45;font-size:14px;max-width:320px}.pin p b{color:var(--fg)}
 .phone.hymns .toast{bottom:calc(100px + env(safe-area-inset-bottom,0px))}
@@ -746,17 +748,11 @@ async function bookChosen(book){
   const r = await cmd("hymnbook", {book});
   if(r.ok) toast(`OBS is showing “${BOOKS[book].name}”.`);
 }
-/* The PIN for the Soterio hymn book's Presenter Mode: this laptop's Wi-Fi address and its pairing code.
-   The hymn book on the internet can't reach the laptop itself, so the PIN takes that phone to the laptop's copy
-   of it (http://<laptop>:8650/hymns), pairs it and turns Presenter Mode on. Eg 192.168.1.20 with code 482: 1276 482
-   (1 = 192.168.x.y, then x*256+y). 2 = 10.x.y.z, 3 = 172.16-31.x.y. "" when the address can't go in a PIN. */
-function pinFor(code){
-  const m = String(window.BGH_HOST || location.hostname).match(/^(\d+)\.(\d+)\.(\d+)\.(\d+)$/);
-  if(!m || !/^\d{3}$/.test(code || "") || (location.port || "80") !== String(8650) && !window.BGH_HOST) return null;
-  const [a, b, c, e] = m.slice(1).map(Number);
-  const t = a === 192 && b === 168 ? [1, c * 256 + e] : a === 10 ? [2, b * 65536 + c * 256 + e] : a === 172 && b >= 16 && b <= 31 ? [3, (b - 16) * 65536 + c * 256 + e] : null;
-  return t ? {addr:String(t[0]) + t[1], code} : null;
-}
+/* The PIN for the Soterio hymn book's Presenter Mode is this laptop's 3-digit pairing code. The hymn book on the
+   internet can't reach the laptop itself, so it takes the phone to the laptop's copy of it
+   (http://<laptop>:8650/?code=PIN&next=hymns), which pairs and turns Presenter Mode on. The phone asks for the
+   laptop's address (shown under the PIN) the first time, then remembers it. */
+const laptopAddr = () => { const h = String(window.BGH_HOST || location.hostname), pt = window.BGH_HOST ? "8650" : (location.port || "80"); return pt === "8650" ? h : h + ":" + pt; };
 async function pinRefresh(){
   clearTimeout(S.pinT);
   if(S.mode !== "hymns" || S.book !== "soterio") return;
@@ -778,14 +774,15 @@ function hymnsHTML(){
   return NB.view === "hymn" && nbHymn(NB.n) ? nbHymnHTML(nbHymn(NB.n)) : nbListHTML();
 }
 function soterioHTML(){
-  const st = S.st || {}, p = pinFor(S.pin), sc = st.hymnScenes || {};
+  const st = S.st || {}, sc = st.hymnScenes || {};
   return `<div class="nb"><div class="nb-bar"><button class="gear" id="nbBooks" type="button" aria-label="Hymn books">${ic("back")}</button><b class="nb-bk">${BOOKS.soterio.name}</b></div>
     <div class="nb-center">
       ${sc.soterio === false ? `<div class="banner">${ic("wifi")}<div>OBS has no scene called <b>${BOOKS.soterio.name}</b>. Add it with a Browser Source of http://127.0.0.1:8650/hymn-screen?book=soterio.</div></div>` : ""}
       <div class="pin">
         <span class="label">Presenter Mode PIN</span>
-        ${p ? `<div class="pin-n tn" aria-label="PIN ${esc((p.addr + p.code).split("").join(" "))}"><span>${esc(p.addr)}</span><span>${esc(p.code)}</span></div>` : S.pin ? `<div class="pin-a">${esc(location.host)}/hymns</div>` : `<div class="pin-n tn dim"><span>· · ·</span></div>`}
-        <p>${p ? "On the phone with the Soterio hymn book, open <b>Settings</b>, then <b>Presenter Mode</b>, and type this PIN. The phone needs to be on the church Wi-Fi." : S.pin ? "On the phone on the church Wi-Fi, open this address, then turn on Presenter Mode in the hymn book's Settings." : "Getting the PIN from the front laptop…"}</p>
+        ${S.pin ? `<div class="pin-n tn" aria-label="PIN ${esc(S.pin.split("").join(" "))}"><span>${esc(S.pin)}</span></div>` : `<div class="pin-n tn dim"><span>· · ·</span></div>`}
+        <p>${S.pin ? "On the phone with the Soterio hymn book, open <b>Settings</b>, then <b>Presenter Mode</b>, and type this PIN. The phone needs to be on the church Wi-Fi." : "Getting the PIN from the front laptop…"}</p>
+        <div class="pin-addr"><span>Laptop address</span><b class="tn">${esc(laptopAddr())}</b><small>The phone asks for this the first time only.</small></div>
       </div>
       <div class="nb-st"><i class="dot${st.program === "The Soterio Hymn Collection" ? "" : " idle"}"></i><span>OBS: ${esc(st.program || "…")}${st.proj ? " · projecting" : " · not projecting"}</span></div>
       ${hymnLive ? `<div class="nb-st"><i class="dot"></i><span>On screen: ${esc(liveLabel())}</span><button class="nb-clr" id="nbClr" type="button">Clear screen</button></div>` : ""}

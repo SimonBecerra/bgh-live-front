@@ -56,11 +56,13 @@ The code changes after each phone pairs, and five wrong codes pause pairing for 
     hymn without taking the verse off the screen; the two open hymns show as tabs, the one on the screen in yellow. **Clear screen**, or going back to the
     list, fades the words out. Its 700 hymns are in `data/new-believers.json`; after changing the text file, run
     `python3 tools/new-believers-to-json.py "The New Believers Hymn Book.txt"` to rebuild it.
-  - **The Soterio Hymn Collection** shows a PIN. On the phone with the Soterio hymn book
-    (https://barringtongospelhall.github.io/soterio/), open Settings → Presenter Mode → Set up and type it. The PIN
-    holds this laptop's Wi-Fi address and its pairing code, so the phone opens the hymn book from the laptop
-    (`http://<laptop>:8650/hymns`), pairs, and turns Presenter Mode on; the hymn book on the internet can't reach the
-    laptop by itself. Tap a verse to show it.
+  - **The Soterio Hymn Collection** shows a 3-digit PIN (this laptop's pairing code) and the laptop's address. On the
+    phone with the Soterio hymn book (https://barringtongospelhall.github.io/soterio/), open Settings → Presenter
+    Mode → Set up and type the PIN; the first time, it also asks for the laptop's address, then remembers it. The
+    hymn book on the internet can't reach the laptop by itself, so the phone opens the hymn book from the laptop
+    (`http://<laptop>:8650/hymns`), pairs, and turns Presenter Mode on. A phone that has connected before can
+    reconnect without a PIN. Tap a verse to show it. Giving the laptop a fixed address on the church router keeps
+    the remembered address working.
   - In OBS, make two scenes, each with a **Browser Source** (1920 × 1080):
     **The New Believers Hymn Book** with `http://127.0.0.1:8650/hymn-screen?book=nbh`, and
     **The Soterio Hymn Collection** with `http://127.0.0.1:8650/hymn-screen?book=soterio`. Each shows only its own
