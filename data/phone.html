@@ -438,7 +438,7 @@ function headerHTML(){
 function render(){
   const P = $("phone");
   if(!S.token){ P.className = "phone"; P.innerHTML = pairHTML(); wirePair(); return; }
-  if(!S.mode){ P.className = "phone"; P.innerHTML = modePickHTML(); wireModePick(); return; }
+  if(!S.mode || S.picking){ P.className = "phone"; P.innerHTML = modePickHTML(); wireModePick(); return; }
   if(!es) connect();
   P.className = "phone" + (live() ? "" : " off") + (isLand() ? " land" : "") + (isTurned() ? " turned" : "") + (S.mode === "hymns" ? " hymns" : "");
   // Redrawing keeps the hymn list where it was scrolled to, and the search box being typed in
@@ -534,8 +534,7 @@ function controllerHTML(){
 }
 
 function wire(){
-  $("modeSwap").onclick = () => { S.sheet = modeSheetHTML; render(); };
-  if(S.sheet === modeSheetHTML) wireModeSheet();
+  $("modeSwap").onclick = () => { S.sheet = null; S.picking = true; render(); };
   if($("connBtn")) $("connBtn").onclick = () => toast("Connected to Device");
   if($("turn")) $("turn").onclick = () => { S.turn = !S.turn; ls.set("bghFrontTurn", S.turn ? "1" : null); render(); };
   if(S.mode === "hymns"){
@@ -780,18 +779,6 @@ function wireHymns(){
   $("nbBack").onclick = () => step(-1);
 }
 
-/* The label at the top: which way this phone is used */
-function modeSheetHTML(){
-  return `<div class="scrim" id="scrim"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="mdH">
-    <h3 id="mdH">Use this phone for</h3>
-    <div class="modes">${Object.entries(MODE_INFO).map(([k, m]) => `<button class="mode-card" type="button" data-mode="${k}" aria-pressed="${S.mode === k}">${ic(m.icon)}<b>${m.name}</b><span>${m.text}</span></button>`).join("")}</div>
-  </div></div>`;
-}
-function wireModeSheet(){
-  $("scrim").onclick = e => { if(e.target.id === "scrim"){ S.sheet = null; render(); } };
-  document.querySelectorAll("#scrim [data-mode]").forEach(b => b.onclick = () => { const m = b.dataset.mode; S.sheet = null; if(m !== S.mode){ setMode(m); toast(MODE_INFO[m].name + " mode"); } else render(); });
-}
-
 /* After pairing, each phone says how it will be used */
 const MODE_INFO = {
   presenter:{icon:"slides", name:"Presenter", text:"Manage Slideshow"},
@@ -802,11 +789,15 @@ function modePickHTML(){
   return `<div class="pair">
     <h1 class="brand">${LOGO}<span><b>BGH</b> Front</span></h1>
     <h2>How will you use this phone?</h2>
-    <div class="modes">${Object.entries(MODE_INFO).map(([k, m]) => `<button class="mode-card" type="button" data-mode="${k}">${ic(m.icon)}<b>${m.name}</b><span>${m.text}</span></button>`).join("")}</div>
+    <div class="modes">${Object.entries(MODE_INFO).map(([k, m]) => `<button class="mode-card" type="button" data-mode="${k}" aria-pressed="${S.mode === k}">${ic(m.icon)}<b>${m.name}</b><span>${m.text}</span></button>`).join("")}</div>
   </div><div class="toast" id="toast" role="status" hidden></div>`;
 }
 function wireModePick(){
-  document.querySelectorAll("[data-mode]").forEach(b => b.onclick = () => setMode(b.dataset.mode));
+  document.querySelectorAll("[data-mode]").forEach(b => b.onclick = () => {
+    const m = b.dataset.mode;
+    S.picking = false;
+    if(m === S.mode) render(); else setMode(m);
+  });
 }
 function setMode(m){
   if(S.mode === "hymns" && m !== "hymns") nbDone();

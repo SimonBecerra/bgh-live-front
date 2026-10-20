@@ -25,7 +25,7 @@ once installed, OBS runs a small web page that phones on the church Wi-Fi open.
 1. Put the phone on the church Wi-Fi (the same network as the laptop).
 2. Point its camera at the QR code in the BGH LIVE Front panel. It opens the remote and pairs straight away.
    Or open the address shown in the panel (like `http://192.168.1.20:8650`) and type the 3-digit code.
-3. Choose **Presenter** or **Controller**. Tap the label at the top to switch later.
+3. Choose **Presenter** or **Controller**. Tap the label at the top to choose again later.
 4. Optional: in Safari, Share → **Add to Home Screen**, so it opens like an app.
 
 A paired phone stays paired. Remove one in the panel's **Paired phones** list and it stops working straight away.
@@ -48,7 +48,7 @@ The code changes after each phone pairs, and five wrong codes pause pairing for 
   **OBS Projector** covers everything; **Presentation** keeps whatever is on the projector in front of OBS.
 - **Scenes.** Only the five scenes above appear on the phone; other scenes in OBS are ignored. Each needs two taps.
   They're listed in `allowedScenes()` in `src/state.cpp`.
-- **Hymns.** Choose **Hymns** on the remote (tap the mode label at the top to change modes), then a hymn book.
+- **Hymns.** Choose **Hymns** on the remote (tap the mode label at the top to choose another mode), then a hymn book.
   **The New Believers Hymn Book** works right in the remote: search by number, title or words, open a hymn, and
   press **Show** or a verse number. **Next** goes verse, chorus, verse; **Clear screen** fades the words out.
   Its 700 hymns are in `data/new-believers.json`; after changing the text file, run
