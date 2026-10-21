@@ -14,7 +14,7 @@ OBSBOT Center must be running. It can sit minimized in the tray, and it doesn't 
   - Arrows (up, down, left, right): hold one to move. It starts slowly and reaches full speed after about 1.5 s,
     so a tap nudges the camera. One direction at a time. Let go and it stops.
   - Zoom slider from 1.00× to 4.00×. Only the thumb drags; a tap on the track does nothing.
-  - **Set** (scan-square icon) and **Go to Shot** (switch-camera icon, thumbnail). Go to Shot is a double tap, and it's greyed out until a shot is set.
+  - **Go to Shot** (switch-camera icon) recalls the preset named **Front** in OBSBOT Center. It is a double tap, and it is greyed out when OBSBOT Center has no preset called Front. There is no Set button: aim the camera, then use **Update PTZ** on the Front preset in OBSBOT Center.
   - **Done** at the bottom.
 - There are no presets, no follow speaker, and no recenter button. The user decided against all three.
 
@@ -25,8 +25,8 @@ OBSBOT Center must be running. It can sit minimized in the tray, and it doesn't 
 - Arrows: `SetGimbalLeft/Right/Up/Down` with speed 1–100. Speed 0 stops. Changing direction sends 0 to the old direction first.
 - Deadman stop: the phone repeats a held push every 250 ms. If the repeats stop for 600 ms, the plug-in sends 0 by itself.
 - Zoom: `SetZoom 0–100`, sent in steps of 4 or more, plus the final value.
-- Set: `GetGimbalPosInfo` and `GetZoomInfo`, then the plug-in keeps the numbers itself, because OSC can't save an OBSBOT preset. The shot is held in memory for the session only and is forgotten when the camera is unplugged or OBS closes.
-- Go to Shot: `SetGimMotorDegree 30 <pan> <tilt>`, then `SetZoom`.
+- Presets: `/OBSBOT/WebCam/Tiny/GetPresetPositionInfo 0` returns `PresetPositionInfo` with (saved, name) for each of 3 slots. The plug-in finds the slot named Front (any case) at start-up, every 10 s, and just before each Go to Shot. OSC has no command to save or update a preset, so Update PTZ stays in OBSBOT Center.
+- Go to Shot: `/OBSBOT/WebCam/Tiny/TriggerPreset <slot 0-2>`.
 - One phone at a time: other phones are told who is moving the camera.
 - Baptism Cam's camera is set to stay on when the scene isn't showing, so the preview works before going live.
 - Warns on the phone and in the OBS panel when OBS gets no picture, which usually means OBSBOT Center's preview is holding the camera.
@@ -48,7 +48,7 @@ OBSBOT Center must be running. It can sit minimized in the tray, and it doesn't 
    - `SetGimMotorDegree` points the camera at an angle.
    - `WakeSleep` and `SetAiMode 0` behave as described.
 
-   Set and Go to Shot depend on the position commands. Rework them if those don't work.
+   Go to Shot depends on `GetPresetPositionInfo` and `TriggerPreset`. Check OBS's log for `camera: the "Front" preset is slot …`.
 
 ### OBSBOT Center, once
 3. Turn off gesture control and voice control. There is no OSC command for either.
@@ -72,9 +72,9 @@ OBSBOT Center must be running. It can sit minimized in the tray, and it doesn't 
 15. Check the Wi-Fi where the operator stands.
 
 ### Each service
-16. Set the shot before switching to Baptism Cam.
+16. Make sure the Front preset in OBSBOT Center is aimed where you want it before switching to Baptism Cam.
 17. Decide who runs the camera.
-18. Re-set the shot each time, because it's forgotten when OBS closes or the camera is unplugged.
+18. If the shot needs to change, aim the camera and press Update PTZ on Front in OBSBOT Center. The preset is kept by OBSBOT Center, so it survives restarts.
 
 ## Status
 - Merged into BGH Front Remote and the BGH LIVE Front plug-in (`src/camera.cpp`), from version 1.0.0.21.

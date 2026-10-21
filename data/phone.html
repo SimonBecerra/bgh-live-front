@@ -149,7 +149,7 @@ svg.i{width:20px;height:20px;flex:none;stroke:currentColor;fill:none;stroke-widt
 .act.cam svg.i{width:30px;height:30px}
 .act.cam.na{color:var(--muted)}
 
-/* Camera sheet: a small preview, the arrows, the zoom slider, Set and Go to shot, then Done */
+/* Camera sheet: a small preview, the arrows, the zoom slider, Go to Shot (the "Front" preset), then Done */
 .scrim .cam-sheet{height:min(calc(100% - 6px), 720px);max-height:none;overflow:hidden;gap:10px;padding-top:14px}
 .cam-sheet > *{flex:none}
 .cam-h{display:flex;align-items:center;gap:10px}
@@ -182,7 +182,7 @@ svg.i{width:20px;height:20px;flex:none;stroke:currentColor;fill:none;stroke-widt
 .zs-thumb.drag{background:var(--accent)}
 .zs-thumb:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 .zs-val{min-width:58px;text-align:right;font-size:16px}
-.shot{display:grid;grid-template-columns:1fr 2fr;gap:10px}
+.shot{display:grid;grid-template-columns:1fr;gap:10px}
 .shot .btn{min-height:60px;font-size:15px}
 .shot-go{justify-content:flex-start;text-align:left;padding:0 10px;gap:10px}
 .shot-go span{display:flex;flex-direction:column;gap:2px;min-width:0}
@@ -794,7 +794,7 @@ function wireStop(){
 
 /* ---------------------------------------------------------------- Camera (Controller mode) */
 const zoomX = z => (1 + 3 * z / 100).toFixed(2) + "×";   // Tiny 2: 1× to 4× zoom
-const camSt = () => (S.st && S.st.cam) || {ok:false, err:"", zoom:0, zoomTo:0, shot:null, at:false};
+const camSt = () => (S.st && S.st.cam) || {ok:false, err:"", zoom:0, zoomTo:0, front:null, at:false};
 const camZoomNow = () => S.camLive ? S.camLive.zoom : camSt().zoom;
 const camAt = () => S.camLive ? S.camLive.at : camSt().at;
 function camSub(){
@@ -817,8 +817,6 @@ async function camCmd(c, args = {}){
 function camEvt(d){
   S.camLive = d;
   const z = $("zoomV"); if(z) z.textContent = zoomX(d.zoom);
-  const go = $("shotGo"), c = camSt();
-  if(go && c.shot && !S.goArmed) go.classList.toggle("at", d.at);
 }
 const camImg = (k, v) => `/api/cam?t=${encodeURIComponent(S.token)}&k=${k}&v=${v}`;
 function camHTML(){
@@ -842,11 +840,9 @@ function camHTML(){
       <b class="zs-val tn" id="zoomV">${zoomX(camZoomNow())}</b>
     </div>
     <div class="shot cam-ctl">
-      <button class="btn" id="shotSet" type="button">${ic("scansq")}Set</button>
-      <button class="btn shot-go${c.shot ? "" : " empty"}${c.shot && at ? " at" : ""}${S.goArmed ? " armed" : ""}" id="shotGo" type="button" aria-label="${S.goArmed ? "Tap again to go to the saved shot" : c.shot ? (at ? "Go to Shot. On the saved shot" : "Go to Shot") : "Go to Shot. No shot saved yet"}">
+      <button class="btn shot-go${c.front === false ? " empty" : ""}${S.goArmed ? " armed" : ""}" id="shotGo" type="button" aria-label="${S.goArmed ? "Tap again to go to the Front preset" : c.front === false ? "Go to Shot. OBSBOT Center has no preset called Front" : "Go to Shot: the Front preset"}">
         ${ic("switchcam")}
-        <span>Go to Shot</span>
-        ${c.shot ? `<i class="shot-th"><img src="${camImg("shot", c.shot.v)}" alt=""></i>` : ""}
+        <span>Go to Shot<small>${S.goArmed ? "Tap again to go" : c.front === false ? "No “Front” preset in OBSBOT Center" : "The “Front” preset in OBSBOT Center"}</small></span>
       </button>
     </div>
     <button class="btn cam-done" id="camX" type="button">Done</button>
@@ -864,16 +860,14 @@ function wireCam(){
   $("camX").onclick = close;
   if($("startCenter")) $("startCenter").onclick = async () => { const r = await camCmd("camStartCenter"); if(r.ok) toast("Starting OBSBOT Center on the front laptop."); };
   $("scrim").onclick = e => { if(e.target.id === "scrim") close(); };
-  $("shotSet").onclick = async () => { const had = !!camSt().shot, r = await camCmd("camSet"); if(r.ok) toast(had ? "Shot replaced. Go to shot comes back here." : "Shot saved. Go to shot comes back here."); };
   // Double tap to go, like Swap: the first tap arms it for 3 seconds, the second moves the camera
   $("shotGo").onclick = async () => {
     const c = camSt();
-    if(!c.shot){ toast("No shot saved yet. Aim the camera, then press Set."); return; }
-    if(camAt()){ toast("The camera is already on the saved shot."); return; }
+    if(c.front === false){ toast("OBSBOT Center has no preset called “Front”. Save one there first."); return; }
     clearTimeout(S.goT);
     if(!S.goArmed){ S.goArmed = true; render(); S.goT = setTimeout(() => { S.goArmed = false; render(); }, 3000); return; }
     S.goArmed = false; render();
-    const r = await camCmd("camGo"); if(r.ok) toast("Going to the saved shot.");
+    const r = await camCmd("camGo"); if(r.ok) toast("Going to the “Front” preset.");
   };
 
   // The preview: a still frame from the laptop about 4 times a second, loaded in the background then swapped in

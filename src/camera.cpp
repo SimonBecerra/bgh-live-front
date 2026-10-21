@@ -37,6 +37,7 @@ the Free Software Foundation; either version 2 of the License, or
 
 #include <algorithm>
 #include <atomic>
+#include <cctype>
 #include <chrono>
 #include <cmath>
 #include <cstring>
@@ -70,7 +71,6 @@ namespace {
 
 const char *G = "/OBSBOT/WebCam/General/";
 const char *kScene = "Baptism Cam"; // the scene that shows this camera: while it's in Program, moves show on stream
-const int kShotSpeed = 30;           // how fast Go to shot turns the camera (0..90): gentle enough to look smooth
 
 /* ------------------------------------------------------------------ settings (camera.json) */
 struct Settings {
@@ -298,6 +298,12 @@ struct Shot {
 bool g_haveShot = false;
 Shot g_shot;
 int g_shotV = 0;
+// Go to Shot recalls the preset named "Front" in OBSBOT Center. OSC addresses presets by slot (0..2) and tells their
+// names, so the slot is looked up by name: -1 when there's no preset called Front.
+const char *kFrontPreset = "Front";
+int g_frontSlot = -1;
+bool g_presetsKnown = false; // OBSBOT Center has said which presets it has
+int g_presetSeq = 0;
 
 // The joystick: signed speeds -100..100 (x: right +, y: up +), who is pushing it and when they last said so
 int g_jx = 0, g_jy = 0;
@@ -312,12 +318,6 @@ std::string g_lastCamEvt;
 bool centerAnswering(int64_t now)
 {
 	return g_lastReply && now - g_lastReply < 6000;
-}
-
-bool atShotLocked()
-{
-	return g_haveShot && g_havePos && std::fabs(g_pan - g_shot.pan) < 0.6 && std::fabs(g_tilt - g_shot.tilt) < 0.6 &&
-	       (!g_haveZoom || std::fabs(g_zoom - g_shot.zoom) < 1.5);
 }
 
 std::string errLocked(int64_t now)
@@ -359,6 +359,25 @@ void prep()
 	osc(std::string(G) + "GetDeviceInfo");
 	osc("/OBSBOT/WebCam/Tiny/SetAiMode", {0});
 	osc("/OBSBOT/WebCam/Tiny/ToggleAILock", {0});
+	osc("/OBSBOT/WebCam/Tiny/GetPresetPositionInfo", {0});
+}
+
+// A preset's name, matched loosely: "front", " Front " and "FRONT" all count
+bool isFrontName(std::string n)
+{
+	while (!n.empty() && std::isspace((unsigned char)n.back()))
+		n.pop_back();
+	size_t a = 0;
+	while (a < n.size() && std::isspace((unsigned char)n[a]))
+		a++;
+	n = n.substr(a);
+	std::string f = kFrontPreset;
+	if (n.size() != f.size())
+		return false;
+	for (size_t i = 0; i < n.size(); i++)
+		if (std::tolower((unsigned char)n[i]) != std::tolower((unsigned char)f[i]))
+			return false;
+	return true;
 }
 
 /* ------------------------------------------------------------------ OBSBOT Center, the app */
@@ -620,6 +639,21 @@ void handleReply(const std::string &addr, const std::vector<OscArg> &args)
 		g_pan = args[args.size() - 1].num();
 		g_havePos = true;
 		g_posSeq++;
+	} else if (ends("PresetPositionInfo") && !args.empty()) {
+		// Three slots: (saved 0/1, name) for each
+		int slot = -1;
+		for (size_t i = 0; i < 3 && i * 2 + 1 < args.size(); i++)
+			if (args[i * 2].num() == 1 && args[i * 2 + 1].type == 's' && isFrontName(args[i * 2 + 1].s))
+				slot = (int)i;
+		if (slot != g_frontSlot || !g_presetsKnown) {
+			if (slot >= 0)
+				obs_log(LOG_INFO, "camera: the \"Front\" preset is slot %d in OBSBOT Center", slot + 1);
+			else
+				obs_log(LOG_INFO, "camera: OBSBOT Center has no preset called \"Front\"");
+		}
+		g_frontSlot = slot;
+		g_presetsKnown = true;
+		g_presetSeq++;
 	} else if ((ends("ZoomInfo") || ends("ZoomInfoResp")) && !args.empty()) {
 		g_zoom = args[0].num();
 		g_haveZoom = true;
@@ -700,8 +734,13 @@ void mainLoop()
 		}
 		if (now - lastHello >= 2000) {
 			lastHello = now;
-			if (centerProcess())
+			if (centerProcess()) {
 				osc(std::string(G) + "Connected");
+				// Every 10 s, which presets OBSBOT Center has (someone may have renamed or added "Front")
+				static int nHello = 0;
+				if (nHello++ % 5 == 0)
+					osc("/OBSBOT/WebCam/Tiny/GetPresetPositionInfo", {0});
+			}
 		}
 		if (doPrep)
 			prep();
@@ -716,7 +755,7 @@ void mainLoop()
 			std::lock_guard<std::mutex> lock(g_m);
 			if (poll)
 				evt = std::string("{\"zoom\":") + std::to_string((int)std::lround(g_haveZoom ? g_zoom : g_zoomTo)) +
-				      ",\"at\":" + (atShotLocked() ? "true" : "false") + "}";
+				      ",\"at\":false}";
 			if (evt == g_lastCamEvt)
 				evt.clear();
 			else
@@ -855,13 +894,11 @@ std::string camJson()
 	std::lock_guard<std::mutex> lock(g_m);
 	const std::string err = errLocked(now);
 	const bool starting = g_startingUntil > now && !centerAnswering(now);
-	std::string shot = "null";
-	if (g_haveShot)
-		shot = "{\"zoom\":" + std::to_string((int)std::lround(g_shot.zoom)) + ",\"v\":" + std::to_string(g_shotV) + "}";
+	// "front": OBSBOT Center has a preset called Front (null: it hasn't said yet)
 	return std::string("{\"ok\":") + (err.empty() ? "true" : "false") + ",\"err\":\"" + jsonEscape(err) + "\"" +
 	       ",\"live\":" + (g_program == kScene ? "true" : "false") +
 	       ",\"zoom\":" + std::to_string((int)std::lround(g_haveZoom ? g_zoom : g_zoomTo)) +
-	       ",\"zoomTo\":" + std::to_string(g_zoomTo) + ",\"shot\":" + shot + ",\"at\":" + (atShotLocked() ? "true" : "false") +
+	       ",\"zoomTo\":" + std::to_string(g_zoomTo) + ",\"front\":" + (!g_presetsKnown ? "null" : g_frontSlot >= 0 ? "true" : "false") + ",\"at\":false" +
 	       ",\"usb\":" + (g_usb ? "true" : "false") + ",\"starting\":" + (starting ? "true" : "false") +
 	       ",\"waking\":false,\"busy\":" + (g_busy ? "true" : "false") +
 	       ",\"canStart\":" + (g_usb && !g_centerRunning && !starting ? "true" : "false") +
@@ -942,39 +979,27 @@ std::string camCommand(const std::string &cmd, obs_data_t *args, const std::stri
 		}
 		return "";
 	}
-	if (cmd == "camSet") {
-		// Ask the camera where it's pointing and how far it's zoomed, then remember that
-		const int pos0 = g_posSeq, zoom0 = g_zoomSeq;
+	if (cmd == "camSet") // phones still showing the old Set button
+		return "Set is now done in OBSBOT Center: aim the camera, then Update PTZ on the \"Front\" preset.";
+	if (cmd == "camGo") {
+		// Ask OBSBOT Center for its presets first, so a "Front" made or renamed a moment ago is found
+		const int seq0 = g_presetSeq;
 		lock.unlock();
-		osc(std::string(G) + "GetGimbalPosInfo");
-		osc(std::string(G) + "GetZoomInfo");
+		osc("/OBSBOT/WebCam/Tiny/GetPresetPositionInfo", {0});
 		for (int i = 0; i < 20; i++) {
-			std::this_thread::sleep_for(std::chrono::milliseconds(30));
+			std::this_thread::sleep_for(std::chrono::milliseconds(25));
 			std::lock_guard<std::mutex> l2(g_m);
-			if (g_posSeq != pos0 && g_zoomSeq != zoom0)
+			if (g_presetSeq != seq0)
 				break;
 		}
-		std::vector<unsigned char> thumb = grab(320);
 		lock.lock();
-		if (!g_havePos)
-			return "OBSBOT Center didn't say where the camera is pointing, so the shot couldn't be saved. Check its OSC setting.";
-		g_shot.pan = g_pan;
-		g_shot.tilt = g_tilt;
-		g_shot.zoom = g_haveZoom ? g_zoom : g_zoomTo;
-		g_shot.thumb.swap(thumb);
-		g_haveShot = true;
-		g_shotV++;
-		obs_log(LOG_INFO, "camera: shot saved (pan %.1f, tilt %.1f, zoom %.0f)", g_shot.pan, g_shot.tilt, g_shot.zoom);
-		return "";
-	}
-	if (cmd == "camGo") {
-		if (!g_haveShot)
-			return "No shot saved yet. Aim the camera, then press Set.";
+		if (!g_presetsKnown)
+			return "OBSBOT Center didn't say which presets it has. Check its OSC setting on the front laptop.";
+		if (g_frontSlot < 0)
+			return "OBSBOT Center has no preset called \"Front\". Aim the camera there, then save a preset named Front.";
 		stopJoyLocked();
-		osc(std::string(G) + "SetGimMotorDegree",
-		    {kShotSpeed, (int)std::lround(g_shot.pan), (int)std::lround(g_shot.tilt)});
-		g_zoomTo = g_zSent = (int)std::lround(g_shot.zoom);
-		osc(std::string(G) + "SetZoom", {g_zoomTo});
+		osc("/OBSBOT/WebCam/Tiny/TriggerPreset", {g_frontSlot});
+		obs_log(LOG_INFO, "camera: going to the \"Front\" preset (slot %d)", g_frontSlot + 1);
 		return "";
 	}
 	return "That isn't something the remote can do.";
