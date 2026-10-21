@@ -262,7 +262,10 @@ button.mode-chip:active{transform:scale(.97)}
 .phone.land .acts .act{min-height:56px}
 /* Rotation lock on: the remote turns itself sideways on screen */
 .phone.turned{position:fixed;top:0;left:0;z-index:5;max-width:none;width:100vh;width:100dvh;height:100vw;box-sizing:border-box;
-  padding:max(8px,env(safe-area-inset-left,0px)) 12px;background:var(--bg);transform-origin:top left;transform:rotate(90deg) translateY(-100%)}
+  /* Turned a quarter turn clockwise: its left edge is the top of the screen (under the status bar) and its right edge
+     the bottom (the home bar), so those get the phone's safe areas */
+  padding:8px max(12px,env(safe-area-inset-bottom,0px)) 8px max(12px,env(safe-area-inset-top,0px));
+  background:var(--bg);transform-origin:top left;transform:rotate(90deg) translateY(-100%)}
 
 /* Choosing a mode */
 .modes{display:grid;grid-template-columns:minmax(0,1fr);grid-auto-rows:1fr;gap:12px}
