@@ -1128,7 +1128,13 @@ function wireHymns(){
   if($("nbBooks")) $("nbBooks").onclick = () => { nbDone(); S.book = null; ls.set("bghFrontBook", null); render(); };
   const q = $("nbQ");
   if(q) q.oninput = () => { NB.q = q.value; const p = q.selectionStart; NB.scroll = 0; NB.restore = 0; render(); const n = $("nbQ"); n.focus(); try{ n.setSelectionRange(p, p); }catch(e){} };
-  document.querySelectorAll("[data-n]").forEach(b => b.onclick = () => { NB.scroll = $("nbScroll").scrollTop; NB.tabs = []; nbOpen(+b.dataset.n); });
+  // A hymn chosen from the list goes on the screen straight away, from its first verse (unless it's already on it)
+  document.querySelectorAll("[data-n]").forEach(b => b.onclick = () => {
+    NB.scroll = $("nbScroll").scrollTop; NB.tabs = [];
+    const n = +b.dataset.n, h = nbHymn(n);
+    nbOpen(n);
+    if(h && !nbLiveHere(h) && nbItems(h).length){ NB.vi[n] = 0; nbShow(h, 0, "v"); }
+  });
   const h = S.book === "nbh" && NB.view === "hymn" && $("nbList") && nbHymn(NB.n);
   if(!h) return;
   // Back to the list: the verse goes, the QR code shows, and OBS stays on the hymn book's scene
