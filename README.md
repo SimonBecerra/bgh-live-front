@@ -4,7 +4,7 @@ The phone remote for the laptop at the front of the auditorium at Barrington Gos
 once installed, OBS runs a small web page that phones on the church Wi-Fi open.
 
 - **Presenter** phones change the slideshow on the projector (Back and Next), and show the slide that's on it.
-- **Controller** phones switch OBS scenes (Translator: Spanish, Korean or English, Baptism Cam, Black, Thank You for Coming), put OBS
+- **Controller** phones switch OBS scenes (Translator: Spanish, Korean or English, Baptism Cam, Black), put OBS
   full screen on the OPTOMA projector, and start or stop recording.
 
 ## Download
