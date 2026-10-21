@@ -25,6 +25,8 @@ the Free Software Foundation; either version 2 of the License, or
 #include <QWidget>
 
 #include <algorithm>
+#include <cctype>
+#include <cstring>
 #include <atomic>
 #include <chrono>
 #include <future>
@@ -363,6 +365,81 @@ bool hymnSceneExists(const std::string &book)
 	return sceneExists(hymnScene(book));
 }
 
+// The address a hymn book's Browser Source shows
+static std::string hymnScreenUrl(const std::string &book)
+{
+	return "http://127.0.0.1:" + std::to_string(kPort) + "/hymn-screen?book=" + (book == "nbh" ? "nbh" : "soterio");
+}
+
+// Whether a Browser Source's address is this plug-in's hymn screen for that hymn book (with no book=, it shows both)
+static bool hymnUrlOk(std::string u, const std::string &book)
+{
+	std::transform(u.begin(), u.end(), u.begin(), [](unsigned char c) { return (char)std::tolower(c); });
+	const std::string port = ":" + std::to_string(kPort) + "/hymn-screen";
+	if (u.find("127.0.0.1" + port) == std::string::npos && u.find("localhost" + port) == std::string::npos)
+		return false;
+	const size_t q = u.find("book=");
+	if (q == std::string::npos)
+		return true;
+	const size_t e = u.find_first_of("&#", q);
+	return u.substr(q + 5, e == std::string::npos ? std::string::npos : e - q - 5) == book;
+}
+
+// What's wrong with a hymn book's scene, in words ("" when it's ready). It needs a visible Browser Source showing this
+// plug-in's hymn screen for that hymn book; otherwise OBS switches to the scene but no verses appear.
+std::string hymnSceneProblem(const std::string &book)
+{
+	const std::string name = hymnScene(book), want = hymnScreenUrl(book);
+	obs_source_t *src = obs_get_source_by_name(name.c_str());
+	obs_scene_t *scene = src ? obs_scene_from_source(src) : nullptr;
+	if (!scene) {
+		obs_source_release(src);
+		return "There's no scene called \"" + name + "\". Add it with a Browser Source of " + want + ".";
+	}
+	struct Found {
+		std::string book, okHidden, other;
+		bool ok = false, local = false;
+	} f;
+	f.book = book;
+	obs_scene_enum_items(
+		scene,
+		[](obs_scene_t *, obs_sceneitem_t *item, void *p) {
+			auto *f = static_cast<Found *>(p);
+			obs_source_t *s = obs_sceneitem_get_source(item);
+			const char *id = s ? obs_source_get_unversioned_id(s) : nullptr;
+			if (!id || strcmp(id, "browser_source") != 0)
+				return true;
+			obs_data_t *d = obs_source_get_settings(s);
+			const std::string url = obs_data_get_string(d, "url");
+			const bool local = obs_data_get_bool(d, "is_local_file");
+			obs_data_release(d);
+			if (local)
+				f->local = true;
+			else if (hymnUrlOk(url, f->book)) {
+				if (obs_sceneitem_visible(item))
+					f->ok = true;
+				else
+					f->okHidden = obs_source_get_name(s);
+			} else if (f->other.empty())
+				f->other = url.empty() ? "no address" : url;
+			return true;
+		},
+		&f);
+	obs_source_release(src);
+	if (f.ok)
+		return "";
+	if (!f.okHidden.empty())
+		return "The Browser Source \"" + f.okHidden + "\" in \"" + name +
+		       "\" is hidden. Click its eye icon in OBS's Sources list to show it.";
+	if (!f.other.empty())
+		return "The Browser Source in \"" + name + "\" shows " + f.other +
+		       ". Change its URL to " + want + ".";
+	if (f.local)
+		return "The Browser Source in \"" + name + "\" uses a local file. Untick Local file and set its URL to " + want +
+		       ".";
+	return "\"" + name + "\" has no Browser Source. Add one with the URL " + want + ".";
+}
+
 // What OBS showed before the hymn book, to go back to afterwards ("" when no hymn book scene was switched to)
 static std::string g_hymnPrev, g_hymnPrevTop;
 
@@ -384,6 +461,14 @@ std::string hymnSceneShow(const std::string &book, bool required)
 	}
 	if (err.empty() && !isProjecting())
 		err = setProjecting(true);
+	if (err.empty()) {
+		// The scene is on the projector: say so if it can't show the verses
+		const std::string problem = hymnSceneProblem(book);
+		if (!problem.empty()) {
+			obs_log(LOG_WARNING, "hymn verses: %s", problem.c_str());
+			err = problem;
+		}
+	}
 	if (onTop() != "obs") {
 		if (g_hymnPrevTop.empty())
 			g_hymnPrevTop = onTop();

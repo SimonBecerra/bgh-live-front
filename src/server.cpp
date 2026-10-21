@@ -371,6 +371,15 @@ void handleCommand(SOCKET s, const Request &r, const std::string &phone)
 			g_hymn = json;
 		}
 		serverBroadcast("hymn", json);
+		{
+			int screens = 0;
+			std::lock_guard<std::mutex> lock(g_cm);
+			for (auto &c : g_clients)
+				if (c->mode == "screen")
+					screens++;
+			obs_log(LOG_INFO, "hymn verses: %s (sent to %d hymn screen%s in OBS)",
+				json == "{}" ? "cleared" : "a verse", screens, screens == 1 ? "" : "s");
+		}
 		// A verse: put its hymn book's scene on the projector, if it isn't already
 		if (json != "{}") {
 			obs_data_t *sh = obs_data_get_obj(args, "show");

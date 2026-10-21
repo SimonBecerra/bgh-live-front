@@ -74,6 +74,7 @@ std::string setProjecting(bool on);
 std::string hymnSceneShow(const std::string &book, bool required);
 std::string hymnSceneBack();
 bool hymnSceneExists(const std::string &book); // UI thread: OBS has that hymn book's scene
+std::string hymnSceneProblem(const std::string &book); // UI thread: why its scene can't show verses ("" if it can)
 
 QScreen *projectorScreen();      // UI thread
 bool isProjecting();             // UI thread: an OBS projector is open on the projector screen

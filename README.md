@@ -76,7 +76,8 @@ The code changes after each phone pairs, and five wrong codes pause pairing for 
     are in Montserrat, built into the screen page (licence in `data/fonts/Montserrat-OFL.txt`), so it shows
     without internet. Add `&bg=none` for no
     background (to put the words over a camera); `&qr=0` or `&qr=1` turns the QR code off or on.
-    The panel's **Hymn verses** section says whether both scenes are there.
+    The panel's **Hymn verses** section checks each scene: that it's there, and that it has a visible Browser
+    Source with the right address. If not, it says what to fix, and so does the phone when it shows a verse.
 - **Network.** The installer allows TCP port 8650 through Windows Firewall. Only phones on the same network can reach it.
 
 ## Where things are on the laptop

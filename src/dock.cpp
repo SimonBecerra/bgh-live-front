@@ -322,7 +322,7 @@ public:
 			names += s->name().toStdString() + ";";
 		std::string sig = address + "|" + c + "|" + k + "|" + (pj ? pj->name().toStdString() : "-") + "|" + choice +
 				  "|" + names + "|" + (isProjecting() ? "P" : "-") + "|" + onTop() + "|" +
-				  (hymnSceneExists("nbh") ? "N" : "-") + (hymnSceneExists("soterio") ? "S" : "-");
+				  hymnSceneProblem("nbh") + "|" + hymnSceneProblem("soterio");
 		{
 			const CamPanel c2 = camPanel();
 			sig += "|cam" + c2.err + (c2.usb ? "u" : "-") + (c2.running ? "r" : "-") + (c2.answering ? "a" : "-") +
@@ -353,15 +353,12 @@ public:
 			QString lines;
 			bool all = true;
 			for (const char *book : {"nbh", "soterio"}) {
-				const bool here = hymnSceneExists(book);
-				all = all && here;
+				const std::string problem = hymnSceneProblem(book);
+				all = all && problem.empty();
 				lines += QString("%1<b>%2</b>: %3")
 						 .arg(lines.isEmpty() ? "" : "<br>")
 						 .arg(QString(front::hymnScene(book)).toHtmlEscaped())
-						 .arg(here ? QString("ready")
-							   : QString("add this scene with a Browser Source of http://127.0.0.1:%1/hymn-screen?book=%2 (1920×1080)")
-								     .arg(kPort)
-								     .arg(book));
+						 .arg(problem.empty() ? QString("ready") : QString::fromStdString(problem).toHtmlEscaped());
 			}
 			hymnScene->setText(lines + "<br>Choosing a hymn book on the remote switches OBS to its scene and projects it.");
 			hymnScene->setStyleSheet(all ? "color:#3ccf7e;" : "color:#ff8a3d;");
