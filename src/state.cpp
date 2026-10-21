@@ -41,7 +41,7 @@ namespace front {
 const std::vector<std::string> &allowedScenes()
 {
 	static const std::vector<std::string> list = {"Spanish Translator", "Korean Translator", "English Translator",
-						      "Baptism Cam", "Black"};
+						      "Baptism Cam", "Black", "Thank You for Coming"};
 	return list;
 }
 
