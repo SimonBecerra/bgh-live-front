@@ -149,7 +149,7 @@ svg.i{width:20px;height:20px;flex:none;stroke:currentColor;fill:none;stroke-widt
 .act.cam svg.i{width:30px;height:30px}
 .act.cam.na{color:var(--muted)}
 
-/* Camera sheet: a small preview, the joystick, the zoom slider, Set and Go to shot, then Done */
+/* Camera sheet: a small preview, the arrows, the zoom slider, Set and Go to shot, then Done */
 .scrim .cam-sheet{height:min(calc(100% - 6px), 720px);max-height:none;overflow:hidden;gap:10px;padding-top:14px}
 .cam-sheet > *{flex:none}
 .cam-h{display:flex;align-items:center;gap:10px}
@@ -163,16 +163,15 @@ svg.i{width:20px;height:20px;flex:none;stroke:currentColor;fill:none;stroke-widt
 .cam-pv .none{position:absolute;inset:0;display:grid;place-items:center;font-size:12px;color:var(--dim)}
 .cam-sheet > .joy-wrap{flex:1 1 0;min-height:110px}
 .joy-wrap{container-type:size;position:relative;display:grid;place-items:center;padding:0;border-radius:16px;background:var(--bg);border:1px solid var(--line)}
-.joy{position:relative;width:min(210px, calc(100cqh - 12px), calc(100cqw - 24px));aspect-ratio:1;height:auto;border-radius:50%;background:var(--panel-2);border:1px solid var(--line-2);touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;cursor:grab}
-.joy::before{content:"";position:absolute;inset:12%;border-radius:50%;border:1px dashed var(--line-2)}
-.joy .tick{position:absolute;width:0;height:0;border:6px solid transparent}
-.joy .tick.n{top:8px;left:50%;margin-left:-6px;border-bottom-color:var(--dim)}
-.joy .tick.s{bottom:8px;left:50%;margin-left:-6px;border-top-color:var(--dim)}
-.joy .tick.w{left:8px;top:50%;margin-top:-6px;border-right-color:var(--dim)}
-.joy .tick.e{right:8px;top:50%;margin-top:-6px;border-left-color:var(--dim)}
-.knob{position:absolute;left:32%;top:32%;width:36%;height:36%;border-radius:50%;background:var(--fg);box-shadow:0 6px 18px rgba(0,0,0,.45);transition:transform .18s cubic-bezier(.3,1.4,.5,1);pointer-events:none}
-.knob.drag{transition:none;background:var(--accent)}
-.joy:focus-visible{outline:2px solid var(--accent);outline-offset:4px}
+/* The camera's arrows: hold one to move, let go to stop */
+.dpad{display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);gap:6px;width:min(230px, calc(100cqh - 12px), calc(100cqw - 24px));aspect-ratio:1;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.dp{display:grid;place-items:center;padding:0;border-radius:14px;background:var(--panel-2);border:1px solid var(--line-2);color:var(--fg);touch-action:none;-webkit-touch-callout:none;user-select:none;-webkit-user-select:none}
+.dp svg{width:46%;height:46%;pointer-events:none}
+.dp.up{grid-area:1/2}.dp.left{grid-area:2/1}.dp.right{grid-area:2/3}.dp.down{grid-area:3/2}
+.dp.left svg{transform:rotate(-90deg)}.dp.right svg{transform:rotate(90deg)}.dp.down svg{transform:rotate(180deg)}
+.dp.on{background:var(--accent);border-color:var(--accent);color:var(--bg)}
+.dp:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.dp-mid{grid-area:2/2;place-self:center;width:28%;aspect-ratio:1;border-radius:50%;background:var(--line-2)}
 .zs{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:10px;align-items:center}
 .zs > svg.i{color:var(--muted)}
 .zs-track{position:relative;height:44px;touch-action:none}
@@ -556,7 +555,7 @@ function wireCrash(){
 }
 
 function render(){
-  if(S.held || S.zDrag){ S.renderLater = true; return; }   // a finger is on the joystick or zoom: redraw when it lets go
+  if(S.held || S.zDrag){ S.renderLater = true; return; }   // a finger is on an arrow or the zoom: redraw when it lets go
   clearInterval(S.pvT);
   const P = $("phone");
   if(!S.token){ P.className = "phone"; P.innerHTML = pairHTML(); wirePair(); return; }
@@ -803,7 +802,7 @@ function camSub(){
   if(!c.ok) return c.usb === false ? "Camera not detected" : c.starting ? "Starting OBSBOT Center" : c.waking ? "Waking the camera" : "OBSBOT Center closed";
   return "Zoom " + zoomX(camZoomNow());
 }
-// Camera commands: fire and forget, and a lost connection says so at most every few seconds (the joystick sends a lot)
+// Camera commands: fire and forget, and a lost connection says so at most every few seconds (the arrows send a lot)
 async function camCmd(c, args = {}){
   const say = m => { if(Date.now() - (S.camToastAt || 0) > 2500){ S.camToastAt = Date.now(); toast(m); } };
   let r;
@@ -830,9 +829,9 @@ function camHTML(){
     ${live() && !c.ok ? `<div class="banner">${ic(c.starting || c.waking ? "hourglass" : "wifi")}<div class="ban-col">${esc(c.err)}${c.canStart ? `<button class="btn" id="startCenter" type="button">Open OBSBOT Center</button>` : ""}</div></div>` : ""}
     <div class="cam-pv${c.live ? " live" : ""}">${live() ? `<img id="camPv" src="${camImg("live", S.pvN || 0)}" alt="What the camera sees"><span class="age">Preview · a moment behind</span>` : `<span class="none">No preview</span>`}</div>
     <div class="joy-wrap cam-ctl">
-      <div class="joy" id="joy" tabindex="0" role="application" aria-label="Camera joystick. Drag, or hold the arrow keys, to move the camera. Let go to stop.">
-        <i class="tick n"></i><i class="tick s"></i><i class="tick w"></i><i class="tick e"></i>
-        <div class="knob" id="knob"></div>
+      <div class="dpad" id="dpad" role="group" aria-label="Move the camera: hold an arrow, let go to stop">
+        ${["up", "left", "right", "down"].map(d => `<button class="dp ${d}" type="button" data-dir="${d}" aria-label="Move ${d}">${ARROW}</button>`).join("")}
+        <i class="dp-mid" aria-hidden="true"></i>
       </div>
     </div>
     <div class="zs cam-ctl">
@@ -853,21 +852,12 @@ function camHTML(){
     <button class="btn cam-done" id="camX" type="button">Done</button>
   </div></div>`;
 }
-/* The joystick: speed grows with distance from the middle. A small dead zone stops a resting thumb drifting the camera,
-   and the curve keeps the first half of the travel slow, so moves look smooth on the stream. Let go and it springs back. */
-const JOY_DZ = 0.14;
-function joySpeeds(dx, dy, R){
-  const len = Math.hypot(dx, dy), f = Math.min(1, len / R);
-  if(f < JOY_DZ) return {x:0, y:0};
-  const s = 6 + 94 * Math.pow((f - JOY_DZ) / (1 - JOY_DZ), 2);
-  const q = v => { const n = Math.round(v / 2) * 2; return Math.abs(n) < 4 ? 0 : n; };
-  // Near-straight pushes stay straight: a thumb pushing sideways drifts a little up or down, and that drift
-  // would keep starting and stopping the tilt, which interrupts the pan. Within about 20° of an axis, only that axis moves.
-  const ax = Math.abs(dx), ay = Math.abs(dy), SNAP = 0.36;   // tan 20°
-  return {x:ax < ay * SNAP ? 0 : q(s * dx / len), y:ay < ax * SNAP ? 0 : q(-s * dy / len)};
-}
+/* The camera's arrows. Holding one starts the camera slowly, then it speeds up the longer it's held (full speed after
+   about 1.5 seconds), so a tap nudges it and a long hold covers ground. Only one direction at a time. */
+const ARROW = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 15l7-7 7 7"/></svg>`;
+const DIRS = {up:[0, 1], down:[0, -1], left:[-1, 0], right:[1, 0]}, RAMP_MS = 1500, SLOW = 24;
 function stopHeld(){ if(S.held){ const f = S.held; S.held = null; f(); } }
-// While a finger is on the joystick or the zoom, updates from the laptop wait, so the control under the finger isn't replaced
+// While a finger is on an arrow or the zoom, updates from the laptop wait, so the control under the finger isn't replaced
 function dragEnded(){ if(!S.held && !S.zDrag && S.renderLater){ S.renderLater = false; render(); } }
 function wireCam(){
   const close = () => { stopHeld(); clearTimeout(S.goT); S.goArmed = false; S.sheet = null; render(); };
@@ -898,58 +888,52 @@ function wireCam(){
     im.src = camImg("live", S.pvN);
   }, 250);
 
-  const joy = $("joy"), knob = $("knob");
-  const joyR = () => Math.max(20, (joy.clientWidth - knob.offsetWidth) / 2);   // how far the knob can travel, at whatever size the stick is drawn
   let want = {x:0, y:0}, sent = {x:0, y:0}, tLast = 0, pend = null, rep = null;
   const flush = () => {
     pend = null;
     if(want.x === sent.x && want.y === sent.y) return;
     sent = {...want}; tLast = performance.now(); camCmd("camJoy", sent);
   };
-  const push = sp => {   // at most one message every 80 ms while dragging
+  const push = sp => {   // at most one message every 80 ms
     want = sp;
     if(pend) return;
     const wait = 80 - (performance.now() - tLast);
     wait <= 0 ? flush() : pend = setTimeout(flush, wait);
   };
-  const grab = () => {
+  // Hold an arrow: move that way, faster the longer it's held. Let go (or the finger slides off the phone) and it stops.
+  const hold = (dir, btn) => {
     stopHeld();
-    if(!live() || !camSt().ok){ toast(live() ? camSt().err : "Can't reach the front laptop."); return false; }
-    knob.classList.add("drag");
+    if(!live() || !camSt().ok){ toast(live() ? camSt().err : "Can't reach the front laptop."); return; }
+    const t0 = performance.now(), [ux, uy] = DIRS[dir];
+    const drive = () => {
+      const v = Math.round((SLOW + (100 - SLOW) * Math.min(1, (performance.now() - t0) / RAMP_MS)) / 2) * 2;
+      push({x:ux * v, y:uy * v});
+    };
+    btn.classList.add("on");
+    drive();
+    const ramp = setInterval(drive, 100);
     // Keep telling the laptop "still pushing" every 250 ms; if these stop, the laptop stops the camera by itself
     rep = setInterval(() => { if(sent.x || sent.y) camCmd("camJoy", sent); }, 250);
     S.held = () => {
-      clearTimeout(pend); pend = null; clearInterval(rep); rep = null;
-      knob.classList.remove("drag"); knob.style.transform = ""; want = {x:0, y:0};
+      clearInterval(ramp); clearTimeout(pend); pend = null; clearInterval(rep); rep = null;
+      btn.classList.remove("on"); want = {x:0, y:0};
       if(sent.x || sent.y){ sent = {x:0, y:0}; camCmd("camJoy", sent); }
       setTimeout(dragEnded, 0);
     };
-    return true;
   };
-  const at = e => {
-    const r = joy.getBoundingClientRect();
-    let dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2);
-    const len = Math.hypot(dx, dy);
-    const R = joyR(); if(len > R){ dx *= R / len; dy *= R / len; }
-    knob.style.transform = `translate(${dx.toFixed(1)}px, ${dy.toFixed(1)}px)`;
-    push(len ? joySpeeds(dx, dy, R) : {x:0, y:0});
-  };
-  joy.onpointerdown = e => { e.preventDefault(); try{ joy.setPointerCapture(e.pointerId); }catch(x){} if(grab()) at(e); };
-  joy.onpointermove = e => { if(S.held) at(e); };
-  joy.onpointerup = joy.onpointercancel = joy.onlostpointercapture = () => stopHeld();
-  joy.oncontextmenu = e => e.preventDefault();
-  // Keyboard: hold the arrow keys (three quarters of the way out, so it stays gentle)
-  const keys = new Set(), KX = {ArrowLeft:-1, ArrowRight:1}, KY = {ArrowUp:-1, ArrowDown:1};
-  const keyMove = () => {
-    const dx = [...keys].reduce((s, k) => s + (KX[k] || 0), 0), dy = [...keys].reduce((s, k) => s + (KY[k] || 0), 0);
-    if(!dx && !dy){ stopHeld(); return; }
-    if(!S.held && !grab()) return;
-    const R = joyR(), n = Math.hypot(dx, dy), ox = dx / n * R * 0.75, oy = dy / n * R * 0.75;
-    knob.style.transform = `translate(${ox}px, ${oy}px)`; push(joySpeeds(ox, oy, R));
-  };
-  joy.onkeydown = e => { if(e.key in KX || e.key in KY){ e.preventDefault(); if(!e.repeat){ keys.add(e.key); keyMove(); } } };
-  joy.onkeyup = e => { if(keys.delete(e.key)) keyMove(); };
-  joy.onblur = () => { keys.clear(); stopHeld(); };
+  document.querySelectorAll("#dpad .dp").forEach(b => {
+    b.onpointerdown = e => { e.preventDefault(); try{ b.setPointerCapture(e.pointerId); }catch(x){} hold(b.dataset.dir, b); };
+    b.onpointerup = b.onpointercancel = b.onlostpointercapture = () => stopHeld();
+    b.oncontextmenu = e => e.preventDefault();
+    // Keyboard: hold Space or Enter on an arrow, or an arrow key anywhere on the pad
+    b.onkeydown = e => { if((e.key === " " || e.key === "Enter") && !e.repeat){ e.preventDefault(); hold(b.dataset.dir, b); } };
+    b.onkeyup = e => { if(e.key === " " || e.key === "Enter") stopHeld(); };
+    b.onblur = () => stopHeld();
+  });
+  const KEYS = {ArrowUp:"up", ArrowDown:"down", ArrowLeft:"left", ArrowRight:"right"};
+  const pad = $("dpad");
+  pad.onkeydown = e => { const d = KEYS[e.key]; if(!d) return; e.preventDefault(); if(!e.repeat){ const b = pad.querySelector(`[data-dir="${d}"]`); b.focus(); hold(d, b); } };
+  pad.onkeyup = e => { if(KEYS[e.key]) stopHeld(); };
 
   // Zoom slider: only the round thumb moves it. A tap on the track does nothing, so a stray tap can't jump the zoom on stream.
   const track = $("zTrack"), th = $("zThumb"), fill = $("zFill");

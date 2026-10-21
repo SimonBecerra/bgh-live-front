@@ -227,7 +227,7 @@ public:
 			lay->addWidget(b);
 		}
 		auto *speedRow = new QHBoxLayout();
-		speedRow->addWidget(new QLabel("Joystick top speed"));
+		speedRow->addWidget(new QLabel("Arrows top speed"));
 		camSpeed = new QSlider(Qt::Horizontal);
 		camSpeed->setRange(30, 100);
 		camSpeed->setSingleStep(5);
