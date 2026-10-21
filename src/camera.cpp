@@ -275,6 +275,10 @@ std::thread g_recv, g_loop;
 
 bool g_centerRunning = false; // OBSBOT Center's process is running
 int64_t g_lastReply = 0;      // the last time OBSBOT Center answered
+// OBSBOT Center closing by itself while OBS is projecting: when it happened (0: it hasn't, or it's open again, or
+// someone dismissed the alert). Phones and the OBS panel say so.
+int64_t g_crashAt = 0;
+std::atomic<bool> g_projectingNow{false}; // set once a second on the UI thread
 bool g_prepped = false;
 int64_t g_startingUntil = 0; // the plug-in started OBSBOT Center and is waiting for it
 bool g_usb = true;           // the camera is plugged in (as far as OBS's camera source can tell)
@@ -670,6 +674,12 @@ void mainLoop()
 			lastProc = now;
 			const bool running = centerProcess();
 			std::lock_guard<std::mutex> lock(g_m);
+			if (g_centerRunning && !running && g_projectingNow && g_run) {
+				g_crashAt = now;
+				obs_log(LOG_WARNING, "camera: OBSBOT Center closed while OBS was projecting");
+			}
+			if (running)
+				g_crashAt = 0;
 			g_centerRunning = running;
 		}
 		bool doPrep = false, poll = false;
@@ -804,6 +814,7 @@ void camTick()
 	static int n = 0;
 	if (n++ % 3 == 0)
 		checkSource();
+	g_projectingNow = isProjecting();
 	// The camera source has to be "showing" for OBS to keep its picture coming while a phone watches it
 	bool watched;
 	{
@@ -853,12 +864,18 @@ std::string camJson()
 	       ",\"zoomTo\":" + std::to_string(g_zoomTo) + ",\"shot\":" + shot + ",\"at\":" + (atShotLocked() ? "true" : "false") +
 	       ",\"usb\":" + (g_usb ? "true" : "false") + ",\"starting\":" + (starting ? "true" : "false") +
 	       ",\"waking\":false,\"busy\":" + (g_busy ? "true" : "false") +
-	       ",\"canStart\":" + (g_usb && !g_centerRunning && !starting ? "true" : "false") + "}";
+	       ",\"canStart\":" + (g_usb && !g_centerRunning && !starting ? "true" : "false") +
+	       ",\"crash\":" + std::to_string(g_crashAt) + "}";
 }
 
 std::string camCommand(const std::string &cmd, obs_data_t *args, const std::string &phoneId, const std::string &phoneName)
 {
 	const int64_t now = nowMs();
+	if (cmd == "camCrashOk") { // the alert about OBSBOT Center closing, seen
+		std::lock_guard<std::mutex> lock(g_m);
+		g_crashAt = 0;
+		return "";
+	}
 	if (cmd == "camStartCenter") {
 		if (centerProcess())
 			return "";
@@ -1006,6 +1023,7 @@ CamPanel camPanel()
 	p.starting = g_startingUntil > now && !p.answering;
 	p.busy = g_busy;
 	p.hasSource = g_srcIsDevice;
+	p.crashed = g_crashAt != 0;
 	return p;
 }
 

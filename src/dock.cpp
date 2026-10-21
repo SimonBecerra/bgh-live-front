@@ -326,7 +326,8 @@ public:
 		{
 			const CamPanel c2 = camPanel();
 			sig += "|cam" + c2.err + (c2.usb ? "u" : "-") + (c2.running ? "r" : "-") + (c2.answering ? "a" : "-") +
-			       (c2.starting ? "s" : "-") + (c2.busy ? "b" : "-") + (c2.hasSource ? "h" : "-");
+			       (c2.starting ? "s" : "-") + (c2.busy ? "b" : "-") + (c2.hasSource ? "h" : "-") +
+			       (c2.crashed ? "c" : "-");
 		}
 		const auto ph = phones();
 		for (auto &p : ph)
@@ -437,7 +438,10 @@ public:
 						   .arg(what.toHtmlEscaped())
 						   .arg(cp.starting ? "Starting" : ready ? "Ready" : "Offline"));
 			QString warn;
-			if (cp.busy)
+			if (cp.crashed)
+				warn = "OBSBOT Center closed while OBS was projecting, so the camera can't be moved. Press Open OBSBOT "
+				       "Center below.";
+			else if (cp.busy)
 				warn = "OBS isn't getting the camera's picture. OBSBOT Center's preview is probably holding it: turn off "
 				       "the preview there (the eye icon).";
 			else if (cp.usb && !cp.hasSource)
@@ -445,6 +449,7 @@ public:
 				       "to the Baptism Cam scene as a Video Capture Device.";
 			if (!camWarn->text().startsWith("Checking"))
 				camWarn->setText(warn);
+			camWarn->setStyleSheet(cp.crashed ? "color:#ff5c5c;font-weight:bold;" : "color:#ff8a3d;");
 			camWarn->setVisible(!camWarn->text().isEmpty());
 			camStartBtn->setVisible(cp.usb && !cp.running && !cp.starting);
 			camCheckBtn->setEnabled(ready);

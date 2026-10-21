@@ -67,6 +67,9 @@ svg.i{width:20px;height:20px;flex:none;stroke:currentColor;fill:none;stroke-widt
 .gear svg.i,.conn-btn svg.i{display:block;margin:auto}
 .banner{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:12px;background:var(--warn-soft);border:1px solid var(--warn);font-size:13px;line-height:1.4;flex:none}
 .banner svg.i{color:var(--warn)}
+.banner.crash{background:rgba(255,92,92,.14);border-color:#ff5c5c}
+.banner.crash svg.i{color:#ff5c5c}
+.ban-btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
 
 /* Buttons */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:52px;padding:0 16px;border-radius:var(--r);border:1px solid var(--line-2);background:var(--panel-2);font-weight:600;font-size:16px}
@@ -490,7 +493,7 @@ function connect(){
   if(!S.token || !S.mode) return;
   es = new EventSource(`/api/events?t=${encodeURIComponent(S.token)}&mode=${S.mode}`);
   es.addEventListener("hello", e => { const d = JSON.parse(e.data); S.offset = (d.now || Date.now()) - Date.now(); S.connected = true; render(); });
-  es.addEventListener("state", e => { S.st = JSON.parse(e.data); S.connected = true; if(S.armed && S.st.program === S.armed) S.armed = null; render(); });
+  es.addEventListener("state", e => { S.st = JSON.parse(e.data); S.connected = true; if(S.armed && S.st.program === S.armed) S.armed = null; render(); crashWatch(); });
   es.addEventListener("cam", e => { try{ camEvt(JSON.parse(e.data)); }catch(x){} });
   es.addEventListener("hymn", e => {
     let d = null; try{ d = JSON.parse(e.data); }catch(x){}
@@ -538,7 +541,18 @@ function headerHTML(){
       ${pres && !physLand() ? `<button class="gear" id="turn" type="button" aria-pressed="${S.turn}" aria-label="${S.turn ? "Turn upright" : "Turn sideways"}">${ic("rotate")}</button>` : ""}
       ${pres || hy ? "" : `<button class="gear pj-btn${!st.proj && S.nudgeUntil > Date.now() ? " nudge" : ""}${S.pjBounce ? " bounce" : ""}" id="pjBtn" type="button" aria-pressed="${!!st.proj}" aria-label="${st.proj ? "Projecting on the OPTOMA projector. Tap to stop" : "Project Program on the OPTOMA projector"}">${ic("cast")}</button>`}
     </div></header>
-  ${!live() ? `<div class="banner">${ic("wifi")}<div><b>Can't reach the front laptop.</b> Check OBS is open on it and this phone is on the church Wi-Fi. It reconnects by itself.</div></div>` : ""}`;
+  ${!live() ? `<div class="banner">${ic("wifi")}<div><b>Can't reach the front laptop.</b> Check OBS is open on it and this phone is on the church Wi-Fi. It reconnects by itself.</div></div>` : ""}
+  ${live() && st.cam && st.cam.crash ? `<div class="banner crash">${ic("video")}<div class="ban-col"><div><b>OBSBOT Center closed on the front laptop.</b> It shut down while OBS was projecting, so the camera can't be moved until it's open again.</div>
+    <div class="ban-btns">${st.cam.canStart ? `<button class="btn" id="crashOpen" type="button">Open OBSBOT Center</button>` : ""}<button class="btn" id="crashOk" type="button">OK</button></div></div></div>` : ""}`;
+}
+// OBSBOT Center closing while projecting: every phone is told once, whatever mode it's in
+function crashWatch(){
+  const c = S.st && S.st.cam, id = c && c.crash || 0;
+  if(id && id !== S.crashSeen){ S.crashSeen = id; toast("OBSBOT Center closed on the front laptop."); try{ navigator.vibrate && navigator.vibrate([200, 100, 200]); }catch(e){} }
+}
+function wireCrash(){
+  if($("crashOpen")) $("crashOpen").onclick = async () => { const r = await camCmd("camStartCenter"); if(r.ok) toast("Starting OBSBOT Center on the front laptop."); };
+  if($("crashOk")) $("crashOk").onclick = () => camCmd("camCrashOk");
 }
 
 function render(){
@@ -561,6 +575,7 @@ function render(){
   NB.lastView = NB.view;
   if(typing && $(typing)){ $(typing).focus(); try{ $(typing).setSelectionRange(caret, caret); }catch(e){} }
   wire();
+  wireCrash();
   if(S.mode === "presenter") preloadSlide();
 }
 

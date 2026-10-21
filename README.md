@@ -44,6 +44,9 @@ The code changes after each phone pairs, and five wrong codes pause pairing for 
   the screen's name, so Windows numbering screens differently after a restart doesn't move it. The panel shows
   whether that screen is connected. There's only ever one full-screen projector on a screen: opening another
   (from the remote, the panel or OBS's right-click menus) replaces the one that was there.
+- **If OBSBOT Center closes while projecting.** Every phone, in any mode, shows a red alert with **Open OBSBOT
+  Center** and **OK**, and the panel's Camera section shows the same warning in red. The alert clears when OBSBOT
+  Center is open again, or when someone presses OK.
 - **What's in front on the projector.** The panel's **On top** setting: **Automatic** (the default) keeps
   PowerPoint's slide show and any full-screen presentation (Keynote or Google Slides presenting in a browser) on
   top, OBS's projector second, and everything else, such as an ordinary browser window, underneath.

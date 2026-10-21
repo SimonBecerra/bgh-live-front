@@ -140,6 +140,7 @@ struct CamPanel {
 	// read only
 	std::string err;
 	bool usb = true, running = false, answering = false, starting = false, busy = false, hasSource = false;
+	bool crashed = false; // OBSBOT Center closed by itself while OBS was projecting
 };
 CamPanel camPanel();
 void camSetPanel(const CamPanel &p);
