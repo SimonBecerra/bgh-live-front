@@ -255,8 +255,15 @@ void openSocket()
 	g_sentTo = s.oscPort;
 }
 
+// While OBSBOT Center is starting, it's left alone: OSC messages arriving before it has finished opening the
+// camera can make it crash. Nothing is sent until this time.
+std::atomic<int64_t> g_quietUntil{0};
+const int kStartQuietMs = 20000;
+
 void osc(const std::string &addr, const std::vector<int> &args = {1})
 {
+	if (nowMs() < g_quietUntil)
+		return;
 	std::lock_guard<std::mutex> lock(g_sendm);
 	if (g_sock == INVALID_SOCKET)
 		return;
@@ -707,7 +714,15 @@ void mainLoop()
 		if (now - lastProc >= 1000) {
 			lastProc = now;
 			const bool running = centerProcess();
+			static bool firstLook = true;
 			std::lock_guard<std::mutex> lock(g_m);
+			// OBSBOT Center has just started (not merely found running when OBS opened): give it time to open the camera
+			if (running && !g_centerRunning && !firstLook) {
+				g_quietUntil = now + kStartQuietMs;
+				g_startingUntil = std::max(g_startingUntil, now + kStartQuietMs + 10000);
+				obs_log(LOG_INFO, "camera: OBSBOT Center started; waiting %d s before talking to it", kStartQuietMs / 1000);
+			}
+			firstLook = false;
 			if (g_centerRunning && !running && g_projectingNow && g_run) {
 				g_crashAt = now;
 				obs_log(LOG_WARNING, "camera: OBSBOT Center closed while OBS was projecting");

@@ -148,6 +148,10 @@ void camSetPanel(const CamPanel &p);
 std::string camStartCenterNow();
 std::string camCheckDirections();
 
+/* ---- sync.cpp: the presentation (a screen or window capture) the same size and crop in every scene ---- */
+void syncStart(); // UI thread
+void syncStop();
+
 /* ---- dock.cpp ---- */
 void dockCreate();
 void dockRefresh();

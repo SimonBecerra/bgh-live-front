@@ -38,6 +38,7 @@ static void startAll()
 	front::stateInit();
 	front::slidesStart();
 	front::camStart();
+	front::syncStart();
 	if (!front::serverStart())
 		obs_log(LOG_WARNING, "the phone remote couldn't start on port %d", front::kPort);
 
@@ -71,6 +72,7 @@ static void stopAll()
 	front::serverStop();
 	front::slidesStop();
 	front::camStop();
+	front::syncStop();
 }
 
 static void onFrontendEvent(enum obs_frontend_event event, void *)

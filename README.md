@@ -44,6 +44,9 @@ The code changes after each phone pairs, and five wrong codes pause pairing for 
   the screen's name, so Windows numbering screens differently after a restart doesn't move it. The panel shows
   whether that screen is connected. There's only ever one full-screen projector on a screen: opening another
   (from the remote, the panel or OBS's right-click menus) replaces the one that was there.
+- **The presentation is the same in every scene.** When the screen or window capture that shows the slideshow is
+  moved, resized or cropped in one scene, the plug-in does the same to it in every other scene it's in, so the
+  slideshow doesn't jump in size when the scene changes. A capture added to another scene takes the same size.
 - **If OBSBOT Center closes while projecting.** Every phone, in any mode, shows a red alert with **Open OBSBOT
   Center** and **OK**, and the panel's Camera section shows the same warning in red. The alert clears when OBSBOT
   Center is open again, or when someone presses OK.

@@ -38,6 +38,7 @@ target_sources(
     src/slides.cpp
     src/dock.cpp
     src/camera.cpp
+    src/sync.cpp
     src/qrcodegen.cpp
 )
 
