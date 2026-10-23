@@ -242,13 +242,17 @@ button.mode-chip:active{transform:scale(.97)}
 
 /* Sideways: the slide takes the left, everything else stacks in a column on the right */
 .phone.land{gap:6px}
+/* A phone held sideways: the camera notch is on one side and the home bar along the bottom, so keep clear of both */
+@media (orientation:landscape) and (pointer:coarse){
+  .stage{padding-left:max(52px,calc(env(safe-area-inset-left,0px) + 6px));padding-right:max(52px,calc(env(safe-area-inset-right,0px) + 6px));padding-bottom:max(10px,env(safe-area-inset-bottom,0px))}
+}
 .phone.land .top .brand b{font-size:16px}
 .phone.land .top .brand .logo{height:24px}
 .phone.land .gear{width:34px;height:34px}
-.phone.land .pres{container-type:size;display:grid;grid-template-columns:44px auto minmax(150px,1fr);grid-template-rows:auto;align-content:center;gap:6px 12px;
+.phone.land .pres{container-type:size;display:grid;grid-template-columns:44px auto minmax(110px,1fr);grid-template-rows:auto;align-content:center;gap:6px 12px;
   grid-template-areas:"back slide next"}
 .phone.land .next-up{display:none}
-.phone.land .pv-box{grid-area:slide;width:min(calc(100cqh * var(--ar,1.3333)), calc(100cqw - 44px - 150px - 24px));height:min(100cqh, calc((100cqw - 44px - 150px - 24px) / var(--ar,1.3333)))}
+.phone.land .pv-box{grid-area:slide;width:min(calc(100cqh * var(--ar,1.3333)), calc(100cqw - 44px - 110px - 24px));height:min(100cqh, calc((100cqw - 44px - 110px - 24px) / var(--ar,1.3333)))}
 .phone.land .pres-info{grid-area:info}
 .phone.land .next-up{grid-area:up;grid-template-columns:auto minmax(0,1fr);padding:4px 8px;gap:8px}
 .phone.land .next-up .thumb{height:34px;width:auto}
@@ -264,7 +268,7 @@ button.mode-chip:active{transform:scale(.97)}
 .phone.turned{position:fixed;top:0;left:0;z-index:5;max-width:none;width:100vh;width:100dvh;height:100vw;box-sizing:border-box;
   /* Turned a quarter turn clockwise: its left edge is the top of the screen (under the status bar) and its right edge
      the bottom (the home bar), so those get the phone's safe areas */
-  padding:8px max(12px,env(safe-area-inset-bottom,0px)) 8px max(12px,env(safe-area-inset-top,0px));
+  padding:8px max(28px,env(safe-area-inset-bottom,0px)) 8px max(56px,calc(env(safe-area-inset-top,0px) + 10px));
   background:var(--bg);transform-origin:top left;transform:rotate(90deg) translateY(-100%)}
 
 /* Choosing a mode */
